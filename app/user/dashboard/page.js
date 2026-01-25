@@ -322,6 +322,7 @@ export default function UserDashboard() {
         <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
           <h3 className="text-xl font-bold mb-6">Account Details</h3>
           <div className="space-y-4">
+            <ProfileField label="Plan" value={profile.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) : 'Basic'} />
             <ProfileField label="Email" value={profile.email} />
             <ProfileField label="Phone" value={profile.phone_number} />
             <ProfileField label="Country" value={profile.country} />
@@ -330,12 +331,12 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard label="Total Trades" value="0" icon={<Activity className="w-6 h-6" />} color="blue" />
         <StatCard label="Profit/Loss" value="+0.00%" icon={<TrendingUp className="w-6 h-6" />} color="emerald" />
         <StatCard label="Portfolio Value" value={`${profile.currency} ${Number(profile.balance).toFixed(2)}`} icon={<Wallet className="w-6 h-6" />} color="purple" />
-      </div>
+      </div>*/}
     </div>
   )
 }

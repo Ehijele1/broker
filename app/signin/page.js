@@ -24,6 +24,34 @@ export default function Login() {
     }
   }, [])
 
+  // Add this useEffect after your existing useEffect for theme
+  useEffect(() => {
+    checkIfAlreadyLoggedIn()
+  }, [])
+
+  const checkIfAlreadyLoggedIn = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // User is already authenticated, check their role
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        
+        if (profile?.role === 'admin') {
+          router.push('/admin/dashboard')
+        } else {
+          router.push('/user/dashboard')
+        }
+      }
+    } catch (error) {
+      console.error('Error checking auth:', error)
+    }
+  }
+
   // Save theme preference to localStorage when changed
   const toggleTheme = () => {
     const newTheme = !isDarkMode

@@ -2,261 +2,357 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import ActiveUsers from '@/components/ActiveUsers'
+import { 
+  DollarSign, TrendingUp, Users, Activity,
+  ArrowUpRight, ArrowDownLeft, Settings, Bitcoin, Building2, RefreshCw
+} from 'lucide-react'
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [admin, setAdmin] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     totalUsers: 0,
-    totalBalance: 0,
-    activeTrades: 0
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+    activeTrades: 0,
+    pendingDeposits: 0,
+    pendingWithdrawals: 0,
+    cryptoAddressCount: 0,
+    bankAccountCount: 0
   })
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    checkAdmin()
+    fetchDashboardStats()
+    setupRealtimeSubscriptions()
   }, [])
 
-  const checkAdmin = async () => {
-    try {
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError || !user) {
-        router.push('/signin')
-        return
-      }
+  const setupRealtimeSubscriptions = () => {
+    // Subscribe to deposits changes
+    const depositsChannel = supabase
+      .channel('deposits_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'deposits'
+        },
+        () => {
+          console.log('Deposit change detected, refreshing stats...')
+          fetchDashboardStats()
+        }
+      )
+      .subscribe()
 
-      setAdmin(user)
+    // Subscribe to withdrawals changes
+    const withdrawalsChannel = supabase
+      .channel('withdrawals_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'withdrawals'
+        },
+        () => {
+          console.log('Withdrawal change detected, refreshing stats...')
+          fetchDashboardStats()
+        }
+      )
+      .subscribe()
 
-      // Get admin profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+    // Subscribe to trades changes
+    const tradesChannel = supabase
+      .channel('trades_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trades'
+        },
+        () => {
+          console.log('Trade change detected, refreshing stats...')
+          fetchDashboardStats()
+        }
+      )
+      .subscribe()
 
-      if (profileError) throw profileError
+    // Subscribe to profiles changes (new users)
+    const profilesChannel = supabase
+      .channel('profiles_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          console.log('New user detected, refreshing stats...')
+          fetchDashboardStats()
+        }
+      )
+      .subscribe()
 
-      // Check if user is actually an admin
-      if (profileData.role !== 'admin') {
-        router.push('/user/dashboard')
-        return
-      }
-
-      setProfile(profileData)
-
-      // Fetch all users
-      await fetchUsers()
-    } catch (error) {
-      console.error('Error:', error)
-      router.push('/signin')
-    } finally {
-      setLoading(false)
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(depositsChannel)
+      supabase.removeChannel(withdrawalsChannel)
+      supabase.removeChannel(tradesChannel)
+      supabase.removeChannel(profilesChannel)
     }
   }
 
-  const fetchUsers = async () => {
+  const fetchDashboardStats = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+      // Fetch all stats in parallel
+      const [
+        usersCount,
+        depositsSum,
+        withdrawalsSum,
+        tradesCount,
+        pendingDepositsCount,
+        pendingWithdrawalsCount,
+        cryptoCount,
+        bankCount
+      ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('deposits').select('amount').eq('status', 'approved'),
+        supabase.from('withdrawals').select('amount').eq('status', 'approved'),
+        supabase.from('trades').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('deposits').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('crypto_addresses').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('bank_accounts').select('*', { count: 'exact', head: true }).eq('is_active', true)
+      ])
 
-      if (error) throw error
-
-      setUsers(data)
-
-      // Calculate stats
-      const totalUsers = data.filter(u => u.role === 'user').length
-      const totalBalance = data.reduce((sum, user) => sum + Number(user.balance || 0), 0)
+      const totalDeposits = depositsSum.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0
+      const totalWithdrawals = withdrawalsSum.data?.reduce((sum, w) => sum + Number(w.amount), 0) || 0
 
       setStats({
-        totalUsers,
-        totalBalance,
-        activeTrades: 0 // Will be updated when we add trades table
+        totalUsers: usersCount.count || 0,
+        totalDeposits,
+        totalWithdrawals,
+        activeTrades: tradesCount.count || 0,
+        pendingDeposits: pendingDepositsCount.count || 0,
+        pendingWithdrawals: pendingWithdrawalsCount.count || 0,
+        cryptoAddressCount: cryptoCount.count || 0,
+        bankAccountCount: bankCount.count || 0
       })
     } catch (error) {
-      console.error('Error fetching users:', error)
+      console.error('Error fetching dashboard stats:', error)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/signin')
+  const handleManualRefresh = () => {
+    setRefreshing(true)
+    fetchDashboardStats()
   }
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
       </div>
     )
   }
 
-  if (!profile) return null
-
   return (
-    <>
-      <div className="min-h-screen bg-gray-50">
-        {/* Admin Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-8">
-          <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                <p className="text-purple-100 mt-1">Welcome back, {profile.full_name}</p>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="bg-white text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
+    <div className="p-4 lg:p-8 space-y-6">
+      {/* Header with Settings and Refresh Buttons */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-1">Admin Dashboard</h1>
+          <p className="text-slate-400">Overview of your trading platform</p>
         </div>
+        <div className="flex items-center gap-3">
+          {/* Manual Refresh Button */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors font-semibold disabled:opacity-50"
+            title="Refresh dashboard"
+          >
+            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
 
-        {/* Dashboard Content */}
-        <div className="container mx-auto px-4 py-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalUsers}</p>
-                </div>
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </div>
-              </div>
+          {/* Payment Settings Button */}
+          <button
+            onClick={() => router.push('/admin/settings')}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold"
+          >
+            <Settings className="w-5 h-5" />
+            Payment Settings
+          </button>
+        </div>
+      </div>
+
+      {/* Real-time Update Indicator */}
+      <div className="flex items-center gap-2 text-sm text-green-400">
+        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        Live updates enabled - Dashboard auto-refreshes when data changes
+      </div>
+
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Users - Clickable */}
+        <ClickableStatCard
+          label="Total Users"
+          value={stats.totalUsers}
+          icon={<Users />}
+          color="purple"
+          onClick={() => router.push('/admin/users')}
+        />
+
+        {/* Active Trades - Clickable */}
+        <ClickableStatCard
+          label="Active Trades"
+          value={stats.activeTrades}
+          icon={<TrendingUp />}
+          color="blue"
+          onClick={() => router.push('/admin/trades')}
+        />
+
+        {/* Pending Deposits - Clickable */}
+        <ClickableStatCard
+          label="Pending Deposits"
+          value={stats.pendingDeposits}
+          icon={<DollarSign />}
+          color="yellow"
+          alert={stats.pendingDeposits > 0}
+          onClick={() => router.push('/admin/deposits')}
+          subtitle={stats.pendingDeposits > 0 ? `${stats.pendingDeposits} awaiting approval` : 'No pending deposits'}
+        />
+
+        {/* Pending Withdrawals - Clickable */}
+        <ClickableStatCard
+          label="Pending Withdrawals"
+          value={stats.pendingWithdrawals}
+          icon={<Activity />}
+          color="orange"
+          alert={stats.pendingWithdrawals > 0}
+          onClick={() => router.push('/admin/withdrawals')}
+          subtitle={stats.pendingWithdrawals > 0 ? `${stats.pendingWithdrawals} awaiting approval` : 'No pending withdrawals'}
+        />
+      </div>
+
+      {/* Financial Overview 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <StatCard
+          label="Total Deposits (Approved)"
+          value={`$${stats.totalDeposits.toFixed(2)}`}
+          icon={<ArrowDownLeft />}
+          color="green"
+        />
+        <StatCard
+          label="Total Withdrawals (Approved)"
+          value={`$${stats.totalWithdrawals.toFixed(2)}`}
+          icon={<ArrowUpRight />}
+          color="red"
+        />
+      </div>*/}
+
+      {/* Payment Methods Quick Stats */}
+      <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-800/50">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">Payment Methods</h3>
+          <button
+            onClick={() => router.push('/admin/settings')}
+            className="text-sm text-purple-400 hover:text-purple-300 font-medium"
+          >
+            Manage →
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl">
+            <div className="p-3 bg-orange-500/20 rounded-lg">
+              <Bitcoin className="w-6 h-6 text-orange-400" />
             </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">Total Balance</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    ${stats.totalBalance.toFixed(2)}
-                  </p>
-                </div>
-                <div className="bg-green-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">Active Trades</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">{stats.activeTrades}</p>
-                </div>
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-500 text-sm">Total Admins</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">
-                    {users.filter(u => u.role === 'admin').length}
-                  </p>
-                </div>
-                <div className="bg-yellow-100 p-3 rounded-full">
-                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-              </div>
+            <div>
+              <p className="text-sm text-slate-400">Active Crypto Addresses</p>
+              <p className="text-2xl font-bold">{stats.cryptoAddressCount}</p>
             </div>
           </div>
-
-          {/* Users Table */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-800">All Users</h2>
+          <div className="flex items-center gap-3 p-4 bg-slate-800/50 rounded-xl">
+            <div className="p-3 bg-emerald-500/20 rounded-lg">
+              <Building2 className="w-6 h-6 text-emerald-400" />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Country
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Balance
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
-                            {user.full_name?.charAt(0) || 'U'}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
-                            <div className="text-sm text-gray-500">@{user.username}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.country}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.currency} {Number(user.balance || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-4">Edit</button>
-                        <button className="text-red-600 hover:text-red-900">Delete</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <p className="text-sm text-slate-400">Active Bank Accounts</p>
+              <p className="text-2xl font-bold">{stats.bankAccountCount}</p>
             </div>
           </div>
         </div>
       </div>
-    </>
+
+      {/* Active Users Component */}
+      <ActiveUsers />
+    </div>
+  )
+}
+
+// Non-clickable Stat Card
+function StatCard({ label, value, icon, color }) {
+  const colorClasses = {
+    purple: 'from-purple-500/20 to-fuchsia-500/20 border-purple-500/30',
+    green: 'from-green-500/20 to-emerald-500/20 border-green-500/30',
+    red: 'from-red-500/20 to-rose-500/20 border-red-500/30',
+    blue: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30',
+    yellow: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30',
+    orange: 'from-orange-500/20 to-amber-500/20 border-orange-500/30'
+  }
+
+  return (
+    <div className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur-sm rounded-xl p-4 border`}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm text-slate-400">{label}</p>
+        <div className="p-2 bg-white/5 rounded-lg">{icon}</div>
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
+    </div>
+  )
+}
+
+// Clickable Stat Card with Hover Effects
+function ClickableStatCard({ label, value, icon, color, subtitle, alert, onClick }) {
+  const colorClasses = {
+    purple: 'from-purple-500/20 to-fuchsia-500/20 border-purple-500/30 hover:from-purple-500/30 hover:to-fuchsia-500/30',
+    green: 'from-green-500/20 to-emerald-500/20 border-green-500/30 hover:from-green-500/30 hover:to-emerald-500/30',
+    red: 'from-red-500/20 to-rose-500/20 border-red-500/30 hover:from-red-500/30 hover:to-rose-500/30',
+    blue: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30 hover:from-blue-500/30 hover:to-cyan-500/30',
+    yellow: 'from-yellow-500/20 to-orange-500/20 border-yellow-500/30 hover:from-yellow-500/30 hover:to-orange-500/30',
+    orange: 'from-orange-500/20 to-amber-500/20 border-orange-500/30 hover:from-orange-500/30 hover:to-amber-500/30'
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur-sm rounded-xl p-4 border transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer text-left w-full ${
+        alert ? 'ring-2 ring-yellow-500/50 animate-pulse' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex-1">
+          <p className="text-sm text-slate-400">{label}</p>
+          {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
+        </div>
+        <div className="p-2 bg-white/5 rounded-lg">
+          {icon}
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <p className="text-2xl font-bold">{value}</p>
+        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </button>
   )
 }

@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
+import NotificationBell from '@/components/NotificationBell'
+import UserChat from '@/components/UserChat'
 import { 
   BarChart3, Activity, ChartCandlestick, Wallet, ArrowUpRight, 
   ShieldCheck, History, Boxes, Bell, Settings, LogOut, Menu, X, 
@@ -30,7 +32,6 @@ export default function UserLayout({ children }) {
         setLoading(false)
         return
       }
-      
   
       setUser(user)
   
@@ -52,6 +53,11 @@ export default function UserLayout({ children }) {
       }
   
       setProfile(profileData)
+      
+      // Update session on load using your RPC function
+      await supabase.rpc('update_user_session', {
+        p_user_id: user.id
+      })
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -59,7 +65,37 @@ export default function UserLayout({ children }) {
     }
   }
 
+  // Update user session periodically using your RPC function
+  useEffect(() => {
+    if (!user) return
+
+    // Update every 2 minutes to keep user active
+    const interval = setInterval(async () => {
+      try {
+        await supabase.rpc('update_user_session', {
+          p_user_id: user.id
+        })
+      } catch (error) {
+        console.error('Error updating session:', error)
+      }
+    }, 2 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [user])
+
   const handleSignOut = async () => {
+    // Mark user as offline before signing out
+    if (user) {
+      try {
+        await supabase
+          .from('active_sessions')
+          .update({ is_online: false })
+          .eq('user_id', user.id)
+      } catch (error) {
+        console.error('Error updating session on signout:', error)
+      }
+    }
+    
     await supabase.auth.signOut()
     router.push('/signin')
   }
@@ -75,13 +111,11 @@ export default function UserLayout({ children }) {
     )
   }
 
-  // If auth check finished and there is NO user → go signin
-if (!loading && !user) {
+  if (!loading && !user) {
     router.push('/signin')
     return null
   }
   
-  // While loading profile OR user data → show loader
   if (loading || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
@@ -89,7 +123,6 @@ if (!loading && !user) {
       </div>
     )
   }
-  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -141,9 +174,24 @@ if (!loading && !user) {
           {/* User Profile */}
           <div className="p-4 border-t border-slate-800/50">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
-                {profile.full_name?.charAt(0) || 'U'}
-              </div>
+              {/* Profile Photo Button */}
+              <button
+                onClick={() => router.push('/user/settings')}
+                className="group relative"
+                title="Go to Settings"
+              >
+                {profile.profile_photo_url ? (
+                  <img 
+                    src={profile.profile_photo_url} 
+                    alt={profile.full_name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500/30 group-hover:border-emerald-500 transition-colors"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold border-2 border-emerald-500/30 group-hover:border-emerald-500 transition-colors">
+                    {profile.full_name?.charAt(0) || 'U'}
+                  </div>
+                )}
+              </button>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{profile.full_name}</p>
                 <p className="text-xs text-slate-400 truncate">@{profile.username}</p>
@@ -179,10 +227,8 @@ if (!loading && !user) {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>
-                </button>
+                {/* Use your existing NotificationBell component */}
+                <NotificationBell userId={user.id} />
               </div>
             </div>
           </div>
@@ -193,6 +239,9 @@ if (!loading && !user) {
           {children}
         </div>
       </main>
+
+      {/* User Chat Component - Floating chat for all user pages */}
+      <UserChat />
     </div>
   )
 }

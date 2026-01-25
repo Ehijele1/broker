@@ -28,6 +28,47 @@ export default function SignUp() {
     }
   }, [])
 
+  const [checkingAuth, setCheckingAuth] = useState(true)
+
+useEffect(() => {
+  checkIfAlreadyLoggedIn()
+}, [])
+
+const checkIfAlreadyLoggedIn = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      
+      if (profile?.role === 'admin') {
+        router.push('/admin/dashboard')
+        return
+      } else {
+        router.push('/user/dashboard')
+        return
+      }
+    }
+  } catch (error) {
+    console.error('Error checking auth:', error)
+  } finally {
+    setCheckingAuth(false)
+  }
+}
+
+// Add this before your return statement
+if (checkingAuth) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+    </div>
+  )
+}
+
   // Save theme preference to localStorage when changed
   const toggleTheme = () => {
     const newTheme = !isDarkMode

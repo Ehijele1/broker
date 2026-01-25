@@ -18,13 +18,14 @@ export default function TradePage() {
   const [selectedMarket, setSelectedMarket] = useState('Stock')
   const [selectedAsset, setSelectedAsset] = useState('AAPL')
   const [assetData, setAssetData] = useState({
-    price: 255.37,
-    change: -2.68,
-    changePercent: -1.04,
-    high: 258.90,
-    low: 254.93,
-    volume: '72.14M'
+    price: 0,
+    change: 0,
+    changePercent: 0,
+    high: 0,
+    low: 0,
+    volume: '0'
   })
+  const [livePrice, setLivePrice] = useState(0)
   const [tradeAmount, setTradeAmount] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [selectedLeverage, setSelectedLeverage] = useState('')
@@ -70,7 +71,110 @@ export default function TradePage() {
 
   useEffect(() => {
     checkUser()
+    // Initialize first asset
+    const firstAsset = markets.Stock[0]
+    handleAssetChange(firstAsset)
   }, [])
+
+  // Fetch real-time price data
+  const fetchLivePrice = async () => {
+    try {
+      let url = ''
+      let newPrice = null
+      
+      if (selectedMarket === 'Crypto') {
+        // Use CoinGecko API for crypto prices
+        const cryptoIds = {
+          'BTC/USD': 'bitcoin',
+          'ETH/USD': 'ethereum',
+          'SOL/USD': 'solana',
+          'BNB/USD': 'binancecoin',
+          'XRP/USD': 'ripple'
+        }
+        const coinId = cryptoIds[selectedAsset]
+        if (coinId) {
+          url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
+          const response = await fetch(url)
+          const data = await response.json()
+          
+          if (data[coinId]) {
+            newPrice = data[coinId].usd
+            const change24h = data[coinId].usd_24h_change || 0
+            
+            // Update asset data with real values
+            setAssetData(prev => ({
+              ...prev,
+              price: newPrice,
+              changePercent: change24h,
+              change: newPrice * (change24h / 100),
+              high: newPrice * 1.02,
+              low: newPrice * 0.98
+            }))
+            setLivePrice(newPrice)
+          }
+        }
+      } else if (selectedMarket === 'Stock') {
+        // For stocks, use Finnhub API (free tier)
+        // You can sign up at https://finnhub.io for a free API key
+        // For now, simulate small changes
+        if (assetData.price > 0) {
+          const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price
+          newPrice = assetData.price + fluctuation
+          setLivePrice(newPrice)
+          setAssetData(prev => ({
+            ...prev,
+            price: newPrice
+          }))
+        }
+      } else if (selectedMarket === 'Forex') {
+        // For forex, use exchange rate API
+        const pairs = selectedAsset.split('/')
+        if (pairs.length === 2) {
+          url = `https://api.exchangerate-api.com/v4/latest/${pairs[0]}`
+          const response = await fetch(url)
+          const data = await response.json()
+          
+          if (data.rates && data.rates[pairs[1]]) {
+            newPrice = data.rates[pairs[1]]
+            setLivePrice(newPrice)
+            setAssetData(prev => ({
+              ...prev,
+              price: newPrice
+            }))
+          }
+        }
+      } else if (selectedMarket === 'Indices') {
+        // For indices, simulate small changes
+        if (assetData.price > 0) {
+          const fluctuation = (Math.random() - 0.5) * 0.003 * assetData.price
+          newPrice = assetData.price + fluctuation
+          setLivePrice(newPrice)
+          setAssetData(prev => ({
+            ...prev,
+            price: newPrice
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching live price:', error)
+      // Fallback to simulation on error
+      if (assetData.price > 0) {
+        const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price
+        const newPrice = assetData.price + fluctuation
+        setLivePrice(newPrice)
+      }
+    }
+  }
+
+  useEffect(() => {
+    // Fetch immediately when asset changes
+    fetchLivePrice()
+
+    // Then fetch every 3 seconds for real-time updates
+    const priceInterval = setInterval(fetchLivePrice, 3000)
+
+    return () => clearInterval(priceInterval)
+  }, [selectedAsset, selectedMarket])
 
   useEffect(() => {
     // Load TradingView widget
@@ -123,6 +227,23 @@ export default function TradePage() {
     return selectedAsset
   }
 
+  // Helper function to get currency symbol
+  const getCurrencySymbol = (currency) => {
+    const symbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'AUD': 'A$',
+      'CAD': 'C$',
+      'CHF': 'CHF',
+      'CNY': '¥',
+      'INR': '₹',
+      'NGN': '₦'
+    }
+    return symbols[currency] || currency
+  }
+
   const checkUser = async () => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -157,14 +278,16 @@ export default function TradePage() {
 
   const handleAssetChange = (asset) => {
     setSelectedAsset(asset.symbol)
+    const newPrice = asset.price
     setAssetData({
-      price: asset.price,
-      change: asset.price * (asset.change / 100),
+      price: newPrice,
+      change: newPrice * (asset.change / 100),
       changePercent: asset.change,
-      high: asset.price * 1.02,
-      low: asset.price * 0.98,
+      high: newPrice * 1.02,
+      low: newPrice * 0.98,
       volume: '72.14M'
     })
+    setLivePrice(newPrice)
   }
 
   const toggleFavorite = () => {
@@ -176,37 +299,75 @@ export default function TradePage() {
     }
   }
 
-  const handleTrade = (type) => {
+  const handleTrade = async (type) => {
     // Validate inputs
     if (!tradeAmount || !selectedTime || !selectedLeverage || !selectedAccount) {
       alert('Please fill in all fields')
       return
     }
-
+  
     if (parseFloat(tradeAmount) <= 0) {
       alert('Please enter a valid amount')
       return
     }
-
+  
     if (parseFloat(tradeAmount) > parseFloat(profile.balance)) {
       alert('Insufficient balance')
       return
     }
-
-    // Show success message
-    setSuccessMessage(`${type.toUpperCase()} order placed: ${tradeAmount} units of ${selectedAsset}`)
-    setShowSuccess(true)
-    
-    // Clear form
-    setTradeAmount('')
-    setSelectedTime('')
-    setSelectedLeverage('')
-    setSelectedAccount('')
-
-    // Hide success message after 3 seconds
-    setTimeout(() => {
+  
+    try {
       setShowSuccess(false)
-    }, 3000)
+  
+      // Create trade record in database
+      const { data, error } = await supabase
+        .from('trades')
+        .insert([
+          {
+            user_id: profile.id,
+            asset: selectedAsset,
+            amount: parseFloat(tradeAmount),
+            trade_type: type,
+            leverage: selectedLeverage + 'x',
+            timeframe: selectedTime === '1' ? '1 minute' :
+                       selectedTime === '2' ? '2 minutes' :
+                       selectedTime === '3' ? '3 minutes' :
+                       selectedTime === '5' ? '5 minutes' :
+                       selectedTime === '7' ? '10 minutes' :
+                       selectedTime === '10' ? '10 minutes' :
+                       selectedTime === '15' ? '15 minutes' :
+                       selectedTime === '30' ? '30 minutes' :
+                       selectedTime === '60' ? '1 hour' :
+                       selectedTime === '240' ? '4 hours' :
+                       selectedTime === '1440' ? '1 day' : selectedTime + ' minutes',
+            entry_price: livePrice > 0 ? livePrice : assetData.price,
+            status: 'active'
+          }
+        ])
+        .select()
+  
+      if (error) throw error
+  
+      // Show success message
+      setSuccessMessage(`${type.toUpperCase()} order placed: ${tradeAmount} ${profile.currency} on ${selectedAsset}`)
+      setShowSuccess(true)
+      
+      // Clear form
+      setTradeAmount('')
+      setSelectedTime('')
+      setSelectedLeverage('')
+      setSelectedAccount('')
+  
+      // Hide success message and redirect after 2 seconds
+      setTimeout(() => {
+        setShowSuccess(false)
+        router.push('/user/my-trades')
+      }, 2000)
+  
+    } catch (error) {
+      console.error('Error creating trade:', error)
+      alert('Failed to place trade. Please try again.')
+    }
   }
 
   if (loading) {
@@ -318,7 +479,9 @@ export default function TradePage() {
                 </button>
               </div>
               <div className="text-left sm:text-right">
-                <p className="text-3xl font-bold text-gray-900">${assetData.price.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  ${(livePrice > 0 ? livePrice : assetData.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
                 <div className="flex items-center gap-2 text-sm">
                   {assetData.changePercent >= 0 ? (
                     <TrendingUp className="w-4 h-4 text-green-600" />
@@ -365,7 +528,7 @@ export default function TradePage() {
         <div className="w-full lg:w-96 bg-white border-l border-gray-200 p-4 lg:p-6">
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 mb-6 border border-blue-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <DollarSign className="w-6 h-6 text-blue-600" />
+              <span className="text-blue-600 text-2xl">{getCurrencySymbol(profile.currency)}</span>
               Place Trade
             </h3>
             
@@ -380,8 +543,8 @@ export default function TradePage() {
 
               {/* Price & Balance */}
               <div className="flex justify-between text-sm bg-white p-3 rounded-lg border border-gray-300">
-                <span className="text-gray-600">Price: <span className="font-semibold text-gray-900">${assetData.price.toLocaleString()}</span></span>
-                <span className="text-gray-600">Balance: <span className="font-semibold text-green-600">${Number(profile.balance).toFixed(2)}</span></span>
+                <span className="text-gray-600">Price: <span className="font-semibold text-gray-900">${(livePrice > 0 ? livePrice : assetData.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
+                <span className="text-gray-600">Balance: <span className="font-semibold text-green-600">{getCurrencySymbol(profile.currency)}{Number(profile.balance).toFixed(2)}</span></span>
               </div>
 
               {/* Amount Input */}

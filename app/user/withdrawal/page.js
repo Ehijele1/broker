@@ -3,9 +3,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { 
-  Wallet, ArrowDownLeft, Building2, Bitcoin, DollarSign,
-  CheckCircle, AlertCircle, Info, Shield, Clock, TrendingDown,
-  AlertTriangle, ChevronRight, CreditCard
+  Wallet, Bitcoin, Building2, ArrowLeft, AlertCircle,
+  CheckCircle, Shield, Clock, Info, DollarSign
 } from 'lucide-react'
 
 export default function WithdrawalPage() {
@@ -19,47 +18,36 @@ export default function WithdrawalPage() {
   const [submitting, setSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   
-  // Crypto withdrawal fields
-  const [walletAddress, setWalletAddress] = useState('')
-  const [selectedNetwork, setSelectedNetwork] = useState('')
+  // Crypto withdrawal details
+  const [cryptoNetwork, setCryptoNetwork] = useState('')
+  const [cryptoAddress, setCryptoAddress] = useState('')
   
-  // Bank withdrawal fields
+  // Bank withdrawal details
   const [bankName, setBankName] = useState('')
   const [accountName, setAccountName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
-  const [swiftCode, setSwiftCode] = useState('')
-  const [routingNumber, setRoutingNumber] = useState('')
-
-  // Withdrawal methods
-  const withdrawalMethods = [
+  
+  const paymentMethods = [
     {
       id: 'crypto',
       name: 'Cryptocurrency',
       icon: <Bitcoin className="w-6 h-6" />,
-      description: 'Bitcoin, Ethereum, USDT',
+      description: 'Withdraw to crypto wallet',
       processingTime: '24-48 hours',
-      fees: 'Network fees apply',
-      minAmount: 100,
+      fees: '2%',
+      minAmount: 50,
       color: 'from-amber-500 to-orange-500'
     },
     {
       id: 'bank',
       name: 'Bank Transfer',
       icon: <Building2 className="w-6 h-6" />,
-      description: 'Wire transfer to your bank',
+      description: 'Withdraw to bank account',
       processingTime: '3-5 business days',
-      fees: 'No fees',
-      minAmount: 1000,
+      fees: '1%',
+      minAmount: 100,
       color: 'from-emerald-500 to-teal-500'
     }
-  ]
-
-  // Crypto networks for withdrawal
-  const cryptoNetworks = [
-    { id: 'btc', name: 'Bitcoin (BTC)', network: 'Bitcoin Network', fee: '0.0005 BTC' },
-    { id: 'eth', name: 'Ethereum (ETH)', network: 'ERC-20', fee: '0.005 ETH' },
-    { id: 'usdt-trc20', name: 'USDT', network: 'TRC-20 (Tron)', fee: '1 USDT' },
-    { id: 'usdt-erc20', name: 'USDT', network: 'ERC-20 (Ethereum)', fee: '5 USDT' }
   ]
 
   useEffect(() => {
@@ -89,7 +77,7 @@ export default function WithdrawalPage() {
     }
   }
 
-  const handleWithdrawal = async (e) => {
+  const handleWithdraw = async (e) => {
     e.preventDefault()
     
     if (!amount || !selectedMethod) {
@@ -97,42 +85,28 @@ export default function WithdrawalPage() {
       return
     }
 
-    const withdrawalAmount = parseFloat(amount)
-    const selectedWithdrawalMethod = withdrawalMethods.find(m => m.id === selectedMethod)
+    const withdrawAmount = parseFloat(amount)
+    const selectedPaymentMethod = paymentMethods.find(m => m.id === selectedMethod)
 
-    // Validations
-    if (withdrawalAmount < selectedWithdrawalMethod.minAmount) {
-      alert(`Minimum withdrawal amount is ${profile.currency} ${selectedWithdrawalMethod.minAmount}`)
+    if (withdrawAmount < selectedPaymentMethod.minAmount) {
+      alert(`Minimum withdrawal amount is ${profile.currency} ${selectedPaymentMethod.minAmount}`)
       return
     }
 
-    if (withdrawalAmount > parseFloat(profile.balance)) {
+    if (withdrawAmount > parseFloat(profile.balance)) {
       alert('Insufficient balance')
       return
     }
 
-    // Method-specific validations
+    // Validate method-specific fields
     if (selectedMethod === 'crypto') {
-      if (!selectedNetwork || !walletAddress) {
-        alert('Please select network and enter wallet address')
+      if (!cryptoNetwork || !cryptoAddress) {
+        alert('Please fill in crypto withdrawal details')
         return
       }
-      
-      // Basic wallet address validation
-      if (walletAddress.length < 26) {
-        alert('Please enter a valid wallet address')
-        return
-      }
-    }
-
-    if (selectedMethod === 'bank') {
+    } else if (selectedMethod === 'bank') {
       if (!bankName || !accountName || !accountNumber) {
-        alert('Please fill in all bank details')
-        return
-      }
-      
-      if (accountNumber.length < 8) {
-        alert('Please enter a valid account number')
+        alert('Please fill in bank withdrawal details')
         return
       }
     }
@@ -140,32 +114,28 @@ export default function WithdrawalPage() {
     try {
       setSubmitting(true)
 
-      // Prepare withdrawal data
+      // Create withdrawal record
       const withdrawalData = {
         user_id: profile.id,
-        amount: withdrawalAmount,
-        method: selectedMethod,
-        status: 'pending',
-        currency: profile.currency
+        amount: withdrawAmount,
+        payment_method: selectedMethod,
+        currency: profile.currency,
+        status: 'pending'
       }
 
-      // Add method-specific data
+      // Add method-specific details
       if (selectedMethod === 'crypto') {
-        withdrawalData.wallet_address = walletAddress
-        withdrawalData.network = selectedNetwork
+        withdrawalData.crypto_network = cryptoNetwork
+        withdrawalData.crypto_address = cryptoAddress
       } else if (selectedMethod === 'bank') {
         withdrawalData.bank_name = bankName
         withdrawalData.account_name = accountName
         withdrawalData.account_number = accountNumber
-        withdrawalData.swift_code = swiftCode || null
-        withdrawalData.routing_number = routingNumber || null
       }
 
-      // Create withdrawal record
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('withdrawals')
         .insert([withdrawalData])
-        .select()
 
       if (error) throw error
 
@@ -175,19 +145,17 @@ export default function WithdrawalPage() {
       // Reset form
       setAmount('')
       setSelectedMethod('')
-      setWalletAddress('')
-      setSelectedNetwork('')
+      setCryptoNetwork('')
+      setCryptoAddress('')
       setBankName('')
       setAccountName('')
       setAccountNumber('')
-      setSwiftCode('')
-      setRoutingNumber('')
 
-      // Redirect after 5 seconds
+      // Redirect after 3 seconds
       setTimeout(() => {
         setShowSuccess(false)
         router.push('/user/transactions')
-      }, 5000)
+      }, 3000)
 
     } catch (error) {
       console.error('Error creating withdrawal:', error)
@@ -205,8 +173,7 @@ export default function WithdrawalPage() {
     )
   }
 
-  const selectedMethodData = withdrawalMethods.find(m => m.id === selectedMethod)
-  const selectedNetworkData = cryptoNetworks.find(n => n.id === selectedNetwork)
+  const selectedMethodData = paymentMethods.find(m => m.id === selectedMethod)
   const availableBalance = parseFloat(profile.balance)
 
   return (
@@ -217,7 +184,7 @@ export default function WithdrawalPage() {
           <CheckCircle className="w-6 h-6" />
           <div>
             <p className="font-bold">Withdrawal Request Submitted!</p>
-            <p className="text-sm opacity-90">Your withdrawal is being processed</p>
+            <p className="text-sm opacity-90">Your request is being processed</p>
           </div>
         </div>
       )}
@@ -242,22 +209,22 @@ export default function WithdrawalPage() {
       <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-6">
         <div className="flex items-start gap-4">
           <div className="p-3 bg-amber-500/20 rounded-xl">
-            <AlertTriangle className="w-6 h-6 text-amber-400" />
+            <AlertCircle className="w-6 h-6 text-amber-400" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-amber-400 mb-2">Withdrawal Notice</h3>
+            <h3 className="text-lg font-bold text-amber-400 mb-2">Withdrawal Guidelines</h3>
             <ul className="space-y-2 text-sm text-slate-300">
               <li className="flex items-start gap-2">
-                <Shield className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
-                <span>All withdrawals are subject to verification and may take 24-48 hours to process</span>
-              </li>
-              <li className="flex items-start gap-2">
                 <Clock className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
-                <span>Ensure your account is verified before requesting withdrawal</span>
+                <span>Withdrawal requests are processed within 24-48 hours</span>
               </li>
               <li className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
-                <span>Double-check all details as transactions cannot be reversed</span>
+                <DollarSign className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                <span>Withdrawal fees apply based on payment method</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Shield className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                <span>Ensure your withdrawal details are correct to avoid delays</span>
               </li>
             </ul>
           </div>
@@ -267,27 +234,14 @@ export default function WithdrawalPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Withdrawal Form */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Select Withdrawal Method */}
+          {/* Select Payment Method */}
           <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
             <h3 className="text-xl font-bold mb-6">Select Withdrawal Method</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {withdrawalMethods.map((method) => (
+              {paymentMethods.map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => {
-                    setSelectedMethod(method.id)
-                    // Reset method-specific fields
-                    if (method.id === 'crypto') {
-                      setBankName('')
-                      setAccountName('')
-                      setAccountNumber('')
-                      setSwiftCode('')
-                      setRoutingNumber('')
-                    } else {
-                      setWalletAddress('')
-                      setSelectedNetwork('')
-                    }
-                  }}
+                  onClick={() => setSelectedMethod(method.id)}
                   className={`relative overflow-hidden rounded-xl p-6 border-2 transition-all text-left ${
                     selectedMethod === method.id
                       ? 'border-emerald-500 bg-emerald-500/10'
@@ -315,7 +269,7 @@ export default function WithdrawalPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
-                        Min: {profile.currency} {method.minAmount}
+                        Fee: {method.fees} • Min: {profile.currency} {method.minAmount}
                       </div>
                     </div>
                   </div>
@@ -325,193 +279,174 @@ export default function WithdrawalPage() {
           </div>
 
           {/* Withdrawal Form */}
-          {selectedMethod && (
-            <form onSubmit={handleWithdrawal} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
-              <h3 className="text-xl font-bold mb-6">Withdrawal Details</h3>
-              
-              <div className="space-y-4">
-                {/* Amount Input */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Withdrawal Amount ({profile.currency}) <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="Enter amount"
-                      min="0"
-                      step="0.01"
-                      max={availableBalance}
-                      required
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-16"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">
-                      {profile.currency}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-2 text-xs">
-                    <span className="text-slate-400">
-                      Minimum: {profile.currency} {selectedMethodData.minAmount}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAmount(availableBalance.toString())}
-                      className="text-emerald-400 hover:text-emerald-300 font-medium"
-                    >
-                      Max: {profile.currency} {availableBalance.toFixed(2)}
-                    </button>
-                  </div>
+          <form onSubmit={handleWithdraw} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
+            <h3 className="text-xl font-bold mb-6">Withdrawal Details</h3>
+            
+            <div className="space-y-4">
+              {/* Amount Input */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Amount ({profile.currency})</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    min="0"
+                    step="0.01"
+                    max={availableBalance}
+                    required
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-16"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">
+                    {profile.currency}
+                  </span>
                 </div>
-
-                {/* Crypto-specific fields */}
-                {selectedMethod === 'crypto' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Select Network <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={selectedNetwork}
-                        onChange={(e) => setSelectedNetwork(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      >
-                        <option value="">-- Select Network --</option>
-                        {cryptoNetworks.map((network) => (
-                          <option key={network.id} value={network.id}>
-                            {network.name} ({network.network}) - Fee: {network.fee}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Wallet Address <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={walletAddress}
-                        onChange={(e) => setWalletAddress(e.target.value)}
-                        placeholder="Enter your wallet address"
-                        required
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                      <p className="text-xs text-amber-400 mt-2 flex items-start gap-1">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        <span>Ensure the address matches the selected network. Wrong address may result in permanent loss of funds.</span>
-                      </p>
-                    </div>
-                  </>
+                {selectedMethodData && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Available: {profile.currency} {availableBalance.toFixed(2)} • 
+                    Minimum: {profile.currency} {selectedMethodData.minAmount} • 
+                    Fee: {selectedMethodData.fees}
+                  </p>
                 )}
+              </div>
 
-                {/* Bank-specific fields */}
-                {selectedMethod === 'bank' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Bank Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={bankName}
-                        onChange={(e) => setBankName(e.target.value)}
-                        placeholder="Enter bank name"
-                        required
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Account Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={accountName}
-                        onChange={(e) => setAccountName(e.target.value)}
-                        placeholder="Enter account holder name"
-                        required
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Account Number <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
-                        placeholder="Enter account number"
-                        required
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          SWIFT/BIC Code <span className="text-slate-500 text-xs">(Optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={swiftCode}
-                          onChange={(e) => setSwiftCode(e.target.value)}
-                          placeholder="SWIFT code"
-                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Routing Number <span className="text-slate-500 text-xs">(Optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={routingNumber}
-                          onChange={(e) => setRoutingNumber(e.target.value)}
-                          placeholder="Routing number"
-                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Submit Button */}
+              {/* Quick Amount Buttons */}
+              <div className="flex flex-wrap gap-2">
                 <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 disabled:from-slate-700 disabled:to-slate-700 rounded-xl font-bold text-lg transition-all shadow-lg disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={() => setAmount((availableBalance * 0.25).toFixed(2))}
+                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
                 >
-                  {submitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownLeft className="w-6 h-6" />
-                      Submit Withdrawal Request
-                      <ChevronRight className="w-5 h-5" />
-                    </>
-                  )}
+                  25%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAmount((availableBalance * 0.5).toFixed(2))}
+                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  50%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAmount((availableBalance * 0.75).toFixed(2))}
+                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  75%
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAmount(availableBalance.toFixed(2))}
+                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Max
                 </button>
               </div>
-            </form>
-          )}
+
+              {/* Crypto Withdrawal Details */}
+              {selectedMethod === 'crypto' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Crypto Network</label>
+                    <select
+                      value={cryptoNetwork}
+                      onChange={(e) => setCryptoNetwork(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="">Select network</option>
+                      <option value="BTC">Bitcoin (BTC)</option>
+                      <option value="ERC20">Ethereum (ERC20)</option>
+                      <option value="TRC20">Tron (TRC20)</option>
+                      <option value="BEP20">Binance Smart Chain (BEP20)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Wallet Address</label>
+                    <input
+                      type="text"
+                      value={cryptoAddress}
+                      onChange={(e) => setCryptoAddress(e.target.value)}
+                      placeholder="Enter your wallet address"
+                      required
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                    />
+                    <p className="text-xs text-amber-400 mt-2 flex items-start gap-1">
+                      <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      Double-check your wallet address. Funds sent to wrong address cannot be recovered.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Bank Withdrawal Details */}
+              {selectedMethod === 'bank' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Bank Name</label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="Enter bank name"
+                      required
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Account Name</label>
+                    <input
+                      type="text"
+                      value={accountName}
+                      onChange={(e) => setAccountName(e.target.value)}
+                      placeholder="Enter account holder name"
+                      required
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Account Number</label>
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="Enter account number"
+                      required
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={!selectedMethod || submitting || availableBalance === 0}
+                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-xl font-bold text-lg transition-all shadow-lg disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-6 h-6" />
+                    Submit Withdrawal Request
+                    <ArrowLeft className="w-5 h-5 rotate-180" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Right Column - Summary & Info */}
         <div className="space-y-6">
           {/* Withdrawal Summary */}
-          <div className="bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/30 rounded-2xl p-6">
+          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <TrendingDown className="w-5 h-5 text-rose-400" />
+              <DollarSign className="w-5 h-5 text-emerald-400" />
               Withdrawal Summary
             </h3>
             <div className="space-y-3">
@@ -519,66 +454,37 @@ export default function WithdrawalPage() {
                 <span className="text-slate-400">Method:</span>
                 <span className="font-semibold">{selectedMethodData?.name || 'Not selected'}</span>
               </div>
-              {selectedMethod === 'crypto' && selectedNetworkData && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Network:</span>
-                    <span className="font-semibold">{selectedNetworkData.network}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Network Fee:</span>
-                    <span className="font-semibold">{selectedNetworkData.fee}</span>
-                  </div>
-                </>
-              )}
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Amount:</span>
                 <span className="font-semibold">{amount || '0'} {profile.currency}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Processing:</span>
-                <span className="font-semibold">{selectedMethodData?.processingTime || 'N/A'}</span>
+                <span className="text-slate-400">Fee:</span>
+                <span className="font-semibold">{selectedMethodData?.fees || 'N/A'}</span>
               </div>
-              <div className="pt-3 border-t border-rose-500/30">
+              <div className="pt-3 border-t border-emerald-500/30">
                 <div className="flex justify-between">
                   <span className="text-slate-400">You'll Receive:</span>
-                  <span className="font-bold text-xl text-rose-400">
-                    {amount || '0'} {profile.currency}
+                  <span className="font-bold text-xl text-emerald-400">
+                    {amount && selectedMethodData 
+                      ? (parseFloat(amount) * (1 - parseFloat(selectedMethodData.fees) / 100)).toFixed(2)
+                      : '0'} {profile.currency}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">Network fees deducted separately</p>
               </div>
             </div>
           </div>
 
-          {/* Available Balance */}
+          {/* Security Badge */}
           <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
             <div className="flex items-start gap-3">
               <div className="p-3 bg-emerald-500/20 rounded-xl">
-                <Wallet className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold mb-2">Available Balance</h4>
-                <p className="text-3xl font-bold text-emerald-400 mb-1">
-                  {profile.currency} {availableBalance.toFixed(2)}
-                </p>
-                <p className="text-xs text-slate-400">
-                  Ensure sufficient balance for withdrawal
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Security Info */}
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
-            <div className="flex items-start gap-3">
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <Shield className="w-6 h-6 text-blue-400" />
+                <Shield className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
                 <h4 className="font-bold mb-2">Secure Withdrawals</h4>
                 <p className="text-sm text-slate-400">
-                  All withdrawal requests are manually reviewed for your security. Ensure your account is verified.
+                  All withdrawal requests are manually reviewed for security.
                 </p>
               </div>
             </div>
@@ -590,13 +496,6 @@ export default function WithdrawalPage() {
             <p className="text-sm text-slate-400 mb-4">
               If you have any questions about withdrawals, contact our support team.
             </p>
-            <button
-              type="button"
-              onClick={() => router.push('/user/verification')}
-              className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors mb-2"
-            >
-              Verify Account
-            </button>
             <button
               type="button"
               className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { 
   User, Mail, Phone, MapPin, Lock, Eye, EyeOff, Shield,
   Bell, Globe, DollarSign, Save, CheckCircle, AlertCircle,
-  Camera, Edit2, Key, Smartphone, CreditCard, Building
+  Camera, Edit2, Key, Smartphone, CreditCard, Building, Upload, X
 } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -23,6 +23,13 @@ export default function SettingsPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [country, setCountry] = useState('')
   const [currency, setCurrency] = useState('')
+  
+  // Profile photo state
+  const [profilePhoto, setProfilePhoto] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false)
+  const [showPhotoModal, setShowPhotoModal] = useState(false)
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -46,6 +53,30 @@ export default function SettingsPage() {
   ]
 
   const currencies = ['USD', 'EUR', 'GBP', 'NGN', 'ZAR', 'KES', 'GHS']
+
+  const convertCurrency = async (fromCurrency, toCurrency, amount) => {
+    if (fromCurrency === toCurrency) {
+      return amount
+    }
+
+    try {
+      const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`)
+      const data = await response.json()
+      const rate = data.rates[toCurrency]
+      
+      if (!rate) {
+        throw new Error('Exchange rate not found')
+      }
+      
+      const convertedAmount = amount * rate
+      return parseFloat(convertedAmount.toFixed(2))
+      
+    } catch (error) {
+      console.error('Currency conversion error:', error)
+      alert('Failed to fetch exchange rate. Balance not converted.')
+      return amount
+    }
+  }
 
   useEffect(() => {
     checkUser()
@@ -76,6 +107,11 @@ export default function SettingsPage() {
         setCountry(profileData.country || '')
         setCurrency(profileData.currency || 'USD')
         
+        // Set profile photo preview if exists
+        if (profileData.profile_photo_url) {
+          setPhotoPreview(profileData.profile_photo_url)
+        }
+        
         // Set notification preferences if they exist
         setEmailNotifications(profileData.email_notifications ?? true)
         setTradeAlerts(profileData.trade_alerts ?? true)
@@ -89,12 +125,138 @@ export default function SettingsPage() {
     }
   }
 
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo size must be less than 2MB')
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    setProfilePhoto(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleUploadPhoto = async () => {
+    if (!profilePhoto) return
+
+    try {
+      setUploadingPhoto(true)
+
+      // Create unique filename
+      const fileExt = profilePhoto.name.split('.').pop()
+      const fileName = `${profile.id}/${Date.now()}.${fileExt}`
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(fileName, profilePhoto, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(fileName)
+
+      // Update profile with photo URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_photo_url: publicUrl })
+        .eq('id', profile.id)
+
+      if (updateError) throw updateError
+
+      setProfile({ ...profile, profile_photo_url: publicUrl })
+      setProfilePhoto(null)
+      
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
+
+    } catch (error) {
+      console.error('Error uploading photo:', error)
+      alert('Failed to upload photo. Please try again.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleRemovePhoto = () => {
+    setProfilePhoto(null)
+    setPhotoPreview(profile?.profile_photo_url || null)
+  }
+
+  const handleDeletePhoto = async () => {
+    try {
+      setUploadingPhoto(true)
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ profile_photo_url: null })
+        .eq('id', profile.id)
+
+      if (error) throw error
+
+      setProfile({ ...profile, profile_photo_url: null })
+      setPhotoPreview(null)
+      setShowPhotoMenu(false)
+      
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 3000)
+
+    } catch (error) {
+      console.error('Error deleting photo:', error)
+      alert('Failed to delete photo. Please try again.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleViewPhoto = () => {
+    setShowPhotoModal(true)
+    setShowPhotoMenu(false)
+  }
+
+  const handleChangePhoto = () => {
+    document.getElementById('photo-upload').click()
+    setShowPhotoMenu(false)
+  }
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
     
     try {
       setSaving(true)
-
+  
+      // Check if currency changed
+      const currencyChanged = currency !== profile.currency
+      let newBalance = profile.balance
+  
+      if (currencyChanged) {
+        newBalance = await convertCurrency(
+          profile.currency,
+          currency,
+          parseFloat(profile.balance)
+        )
+      }
+  
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -102,22 +264,23 @@ export default function SettingsPage() {
           username: username,
           phone_number: phoneNumber,
           country: country,
-          currency: currency
+          currency: currency,
+          balance: newBalance
         })
         .eq('id', profile.id)
-
+  
       if (error) throw error
-
-      // Update local profile state
+  
       setProfile({
         ...profile,
         full_name: fullName,
         username: username,
         phone_number: phoneNumber,
         country: country,
-        currency: currency
+        currency: currency,
+        balance: newBalance
       })
-
+  
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 3000)
     } catch (error) {
@@ -195,21 +358,38 @@ export default function SettingsPage() {
 
   const handleUpdatePreferences = async (e) => {
     e.preventDefault()
-
+  
     try {
       setSaving(true)
-
+  
+      // Check if currency changed
+      const currencyChanged = currency !== profile.currency
+      let newBalance = profile.balance
+  
+      if (currencyChanged) {
+        newBalance = await convertCurrency(
+          profile.currency,
+          currency,
+          parseFloat(profile.balance)
+        )
+      }
+  
       const { error } = await supabase
         .from('profiles')
         .update({
-          currency: currency
+          currency: currency,
+          balance: newBalance
         })
         .eq('id', profile.id)
-
+  
       if (error) throw error
-
-      setProfile({ ...profile, currency: currency })
-
+  
+      setProfile({ 
+        ...profile, 
+        currency: currency,
+        balance: newBalance
+      })
+  
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 3000)
     } catch (error) {
@@ -251,20 +431,124 @@ export default function SettingsPage() {
       <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-2xl font-bold">
-              {profile.full_name?.charAt(0) || 'U'}
-            </div>
-            <button className="absolute bottom-0 right-0 p-2 bg-slate-800 hover:bg-slate-700 rounded-full border-2 border-slate-900 transition-colors">
+            {photoPreview ? (
+              <img 
+                src={photoPreview} 
+                alt="Profile" 
+                className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-2xl font-bold">
+                {profile.full_name?.charAt(0) || 'U'}
+              </div>
+            )}
+            <button
+              onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+              className="absolute bottom-0 right-0 p-2 bg-slate-800 hover:bg-slate-700 rounded-full border-2 border-slate-900 transition-colors"
+            >
               <Camera className="w-4 h-4" />
             </button>
+
+            {/* Photo Menu Dropdown */}
+            {showPhotoMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowPhotoMenu(false)}
+                ></div>
+                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                  {photoPreview && (
+                    <button
+                      onClick={handleViewPhoto}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-left"
+                    >
+                      <Eye className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm">View Photo</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleChangePhoto}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-left"
+                  >
+                    <Upload className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm">{photoPreview ? 'Change Photo' : 'Add Photo'}</span>
+                  </button>
+                  {photoPreview && (
+                    <button
+                      onClick={handleDeletePhoto}
+                      disabled={uploadingPhoto}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4 text-rose-400" />
+                      <span className="text-sm">Delete Photo</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+            
+            <input
+              id="photo-upload"
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-2xl font-bold">{profile.full_name}</h2>
             <p className="text-slate-400">@{profile.username}</p>
             <p className="text-sm text-emerald-400 mt-1">{profile.email}</p>
           </div>
+          {profilePhoto && (
+            <div className="flex gap-2">
+              <button
+                onClick={handleRemovePhoto}
+                disabled={uploadingPhoto}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleUploadPhoto}
+                disabled={uploadingPhoto}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {uploadingPhoto ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Upload Photo
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Photo View Modal */}
+      {showPhotoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative max-w-3xl w-full">
+            <button
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors z-10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={photoPreview}
+              alt="Profile"
+              className="w-full h-auto rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
