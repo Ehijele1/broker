@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import NotificationBell from '@/components/NotificationBell'
-import UserChat from '@/components/UserChat'
+import UserChat from '@/components/userchat'
 import { 
   BarChart3, Activity, ChartCandlestick, Wallet, ArrowUpRight, 
   ShieldCheck, History, Boxes, Bell, Settings, LogOut, Menu, X, 

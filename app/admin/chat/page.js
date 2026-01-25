@@ -318,7 +318,9 @@ export default function AdminChatPage() {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your message..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-full 
+             bg-white text-black placeholder-gray-500
+             focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   disabled={loading}
                 />
                 <button
