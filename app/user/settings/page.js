@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { 
   User, Mail, Phone, MapPin, Lock, Eye, EyeOff, Shield,
   Bell, Globe, DollarSign, Save, CheckCircle, AlertCircle,
-  Camera, Edit2, Key, Smartphone, CreditCard, Building, Upload, X
+  Camera, Key, CreditCard, Upload, X, Activity, Wallet
 } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -574,7 +574,7 @@ export default function SettingsPage() {
         <p className="text-slate-400">Manage your account settings and preferences</p>
       </div>
 
-      {/* Debug Info (Remove in production) */}
+      {/* Debug Info (Remove in production) 
       <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-4 border border-slate-800/50">
         <p className="text-xs text-slate-400">
           <strong>Debug Info:</strong> DB Currency: {profile?.currency} | Form Currency: {currency} | Balance: {profile?.balance}
@@ -582,7 +582,7 @@ export default function SettingsPage() {
         <p className="text-xs text-slate-400 mt-1">
           <strong>LocalStorage:</strong> {JSON.stringify(getCurrencyFromLocalStorage(profile?.id))}
         </p>
-      </div>
+      </div> */}
 
       {/* Profile Header Card */}
       <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
@@ -842,6 +842,284 @@ export default function SettingsPage() {
             </form>
           )}
 
+          {/* Security Tab*/}
+          {activeTab === 'security' && (
+            <form onSubmit={handleChangePassword} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
+              <div>
+                <h3 className="text-xl font-bold mb-4">Change Password</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      <Lock className="w-4 h-4 inline mr-2" />
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-12"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      <Key className="w-4 h-4 inline mr-2" />
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-12"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                      >
+                        {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">Must be at least 6 characters</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      <Key className="w-4 h-4 inline mr-2" />
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-12"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-sm text-rose-400 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Passwords do not match
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-4">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-400" />
+                  Password Requirements
+                </h4>
+                <ul className="space-y-1 text-sm text-slate-400">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    At least 6 characters long
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    Include letters and numbers for better security
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                type="submit"
+                disabled={saving || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-all disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Updating Password...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Update Password
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* Notification Tab*/}
+          {activeTab === 'notifications' && (
+            <form onSubmit={handleUpdateNotifications} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
+              <div>
+                <h3 className="text-xl font-bold mb-4">Notification Preferences</h3>
+                <p className="text-sm text-slate-400 mb-6">Choose what notifications you want to receive</p>
+                
+                <div className="space-y-6">
+                  {/* Email Notifications */}
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <Mail className="w-5 h-5 text-emerald-400 mt-1" />
+                      <div>
+                        <h4 className="font-semibold">Email Notifications</h4>
+                        <p className="text-sm text-slate-400 mt-1">Receive updates and alerts via email</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEmailNotifications(!emailNotifications)}
+                      className={`relative w-14 h-7 rounded-full transition-colors ${
+                        emailNotifications ? 'bg-emerald-500' : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                          emailNotifications ? 'translate-x-7' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Trade Alerts */}
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <Activity className="w-5 h-5 text-blue-400 mt-1" />
+                      <div>
+                        <h4 className="font-semibold">Trade Alerts</h4>
+                        <p className="text-sm text-slate-400 mt-1">Get notified when trades are executed, closed, or reach profit/loss targets</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTradeAlerts(!tradeAlerts)}
+                      className={`relative w-14 h-7 rounded-full transition-colors ${
+                        tradeAlerts ? 'bg-emerald-500' : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                          tradeAlerts ? 'translate-x-7' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Deposit Alerts */}
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <CreditCard className="w-5 h-5 text-purple-400 mt-1" />
+                      <div>
+                        <h4 className="font-semibold">Deposit Alerts</h4>
+                        <p className="text-sm text-slate-400 mt-1">Receive notifications about deposit status and confirmations</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDepositAlerts(!depositAlerts)}
+                      className={`relative w-14 h-7 rounded-full transition-colors ${
+                        depositAlerts ? 'bg-emerald-500' : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                          depositAlerts ? 'translate-x-7' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Withdrawal Alerts */}
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <Wallet className="w-5 h-5 text-amber-400 mt-1" />
+                      <div>
+                        <h4 className="font-semibold">Withdrawal Alerts</h4>
+                        <p className="text-sm text-slate-400 mt-1">Stay updated on withdrawal requests, approvals, and completions</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWithdrawalAlerts(!withdrawalAlerts)}
+                      className={`relative w-14 h-7 rounded-full transition-colors ${
+                        withdrawalAlerts ? 'bg-emerald-500' : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                          withdrawalAlerts ? 'translate-x-7' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Security Alerts (Always On) */}
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-emerald-500/30">
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-5 h-5 text-emerald-400 mt-1" />
+                      <div>
+                        <h4 className="font-semibold flex items-center gap-2">
+                          Security Alerts
+                          <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full">Always On</span>
+                        </h4>
+                        <p className="text-sm text-slate-400 mt-1">Important security notifications (cannot be disabled)</p>
+                      </div>
+                    </div>
+                    <div className="relative w-14 h-7 rounded-full bg-emerald-500 opacity-50 cursor-not-allowed">
+                      <span className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full translate-x-7" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-blue-400">Notification Tip</h4>
+                    <p className="text-sm text-slate-300 mt-1">
+                      Keep notifications enabled to stay updated on important account activities and never miss critical alerts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-all disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Saving Preferences...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Save Notification Settings
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
           {/* Other tabs remain the same... */}
           {activeTab === 'preferences' && (
             <form onSubmit={handleUpdatePreferences} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
@@ -902,7 +1180,7 @@ export default function SettingsPage() {
                 <span className="text-sm text-slate-400">Email Verified</span>
                 <CheckCircle className="w-5 h-5 text-emerald-400" />
               </div>
-              <div className="flex items-center justify-between">
+             {/*<div className="flex items-center justify-between">
                 <span className="text-sm text-slate-400">Phone Verified</span>
                 <AlertCircle className="w-5 h-5 text-amber-400" />
               </div>
@@ -911,7 +1189,7 @@ export default function SettingsPage() {
                 <span className="text-xs px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full">
                   {profile.kyc_status || 'Pending'}
                 </span>
-              </div>
+              </div>*/} 
             </div>
           </div>
         </div>

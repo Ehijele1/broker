@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import NotificationBell from '@/components/NotificationBell'
 import UserChat from '@/components/userchat'
+import InactivityMonitor from '@/components/InactivityMonitor'
 import { 
   BarChart3, Activity, ChartCandlestick, Wallet, ArrowUpRight, 
   ShieldCheck, History, Boxes, Bell, Settings, LogOut, Menu, X, 
@@ -126,6 +127,9 @@ export default function UserLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+      {/* Inactivity Monitor - Logs out user after 1 hour of inactivity */}
+      <InactivityMonitor userId={user?.id} />
+
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
