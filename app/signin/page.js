@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Moon, Sun, Eye, EyeOff } from 'lucide-react'
+import { Moon, Sun, Eye, EyeOff, Globe } from 'lucide-react'
 import Header from '@/components/Header'
 
 export default function Login() {
@@ -15,6 +15,8 @@ export default function Login() {
   const [error, setError] = useState(null)
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState('en')
 
   // Load theme preference from localStorage on mount
   useEffect(() => {
@@ -24,10 +26,179 @@ export default function Login() {
     }
   }, [])
 
+  // Load saved email and remember me preference
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail')
+    const wasRemembered = localStorage.getItem('rememberMe') === 'true'
+    
+    if (savedEmail && wasRemembered) {
+      setFormData(prev => ({ ...prev, email: savedEmail }))
+      setRememberMe(true)
+    }
+  }, [])
+
   // Add this useEffect after your existing useEffect for theme
   useEffect(() => {
     checkIfAlreadyLoggedIn()
   }, [])
+
+  // Google Translate Integration
+  useEffect(() => {
+    // Load Google Translate script
+    const addScript = () => {
+      if (document.querySelector('script[src*="translate.google.com"]')) return;
+      
+      window.googleTranslateElementInit = function() {
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'en,es,fr,de,it,pt,ru,ja,ko,zh-CN,zh-TW,ar,hi,bn,pa,te,mr,ta,tr,vi,pl,uk,ro,nl,el,cs,sv,hu,fi,da,no',
+          autoDisplay: false
+        }, 'google_translate_element_hidden');
+      };
+      
+      const script = document.createElement('script');
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.body.appendChild(script);
+    };
+
+    setTimeout(addScript, 100);
+
+    // Minimal styles - only hide the hidden element, allow banner to show
+    const style = document.createElement('style');
+    style.innerHTML = `
+      /* Only hide our hidden translate element */
+      #google_translate_element_hidden {
+        display: none !important;
+      }
+      
+      /* Style the Google Translate banner to look better */
+      .goog-te-banner-frame.skiptranslate {
+        background: ${isDarkMode ? '#1e293b' : '#ffffff'} !important;
+        border-bottom: 1px solid ${isDarkMode ? '#334155' : '#e5e7eb'} !important;
+      }
+      
+      /* Adjust header when Google Translate bar appears */
+      body[style*="top"] header,
+      body[style*="top"] > div > header {
+        top: 40px !important;
+      }
+      
+      /* Adjust fixed elements when translate bar is present */
+      body[style*="top"] .fixed {
+        transition: top 0.3s ease !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Monitor body.style.top changes to adjust fixed elements
+    const adjustFixedElements = () => {
+      const bodyTop = window.getComputedStyle(document.body).top;
+      const topValue = parseInt(bodyTop) || 0;
+      
+      if (topValue > 0) {
+        // Google Translate bar is active
+        // Find all fixed elements and adjust their top position
+        const fixedElements = document.querySelectorAll('.fixed');
+        fixedElements.forEach(el => {
+          const currentTop = parseInt(window.getComputedStyle(el).top) || 0;
+          if (currentTop < 100) { // Only adjust elements near the top
+            el.style.top = `${currentTop + topValue}px`;
+          }
+        });
+      }
+    };
+
+    // Watch for body style changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+          adjustFixedElements();
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['style']
+    });
+
+    // Also run on interval as backup
+    const intervalId = setInterval(adjustFixedElements, 500);
+
+    return () => {
+      clearInterval(intervalId);
+      const scripts = document.querySelectorAll('script[src*="translate.google.com"]');
+      scripts.forEach(script => script.remove());
+      style.remove();
+      observer.disconnect();
+    };
+  }, [isDarkMode]);
+
+  const changeLanguage = (langCode) => {
+    setSelectedLanguage(langCode);
+    
+    if (langCode === 'en') {
+      // Reset to original language
+      const translateElement = document.querySelector('.goog-te-combo');
+      if (translateElement) {
+        translateElement.value = '';
+        translateElement.dispatchEvent(new Event('change'));
+      }
+      
+      // Remove Google Translate cookies
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname;
+      
+      // Reload the page to reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    } else {
+      // Trigger Google Translate for other languages
+      setTimeout(() => {
+        const selectElement = document.querySelector('.goog-te-combo');
+        if (selectElement) {
+          selectElement.value = langCode;
+          selectElement.dispatchEvent(new Event('change'));
+        }
+      }, 500);
+    }
+  };
+
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'fr', name: 'French', flag: '🇫🇷' },
+    { code: 'de', name: 'German', flag: '🇩🇪' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
+    { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+    { code: 'zh-CN', name: 'Chinese (S)', flag: '🇨🇳' },
+    { code: 'zh-TW', name: 'Chinese (T)', flag: '🇹🇼' },
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+    { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+    { code: 'bn', name: 'Bengali', flag: '🇧🇩' },
+    { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
+    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
+    { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
+    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
+    { code: 'pl', name: 'Polish', flag: '🇵🇱' },
+    { code: 'uk', name: 'Ukrainian', flag: '🇺🇦' },
+    { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
+    { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
+    { code: 'el', name: 'Greek', flag: '🇬🇷' },
+    { code: 'cs', name: 'Czech', flag: '🇨🇿' },
+    { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
+    { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
+    { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
+    { code: 'da', name: 'Danish', flag: '🇩🇰' },
+    { code: 'no', name: 'Norwegian', flag: '🇳🇴' }
+  ];
 
   const checkIfAlreadyLoggedIn = async () => {
     try {
@@ -80,6 +251,17 @@ export default function Login() {
 
       if (signInError) throw signInError
 
+      // Handle Remember Me functionality
+      if (rememberMe) {
+        // Save email and remember preference to localStorage
+        localStorage.setItem('rememberedEmail', formData.email.trim())
+        localStorage.setItem('rememberMe', 'true')
+      } else {
+        // Clear saved email if Remember Me is unchecked
+        localStorage.removeItem('rememberedEmail')
+        localStorage.removeItem('rememberMe')
+      }
+
       // Get user profile to check role
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -105,7 +287,11 @@ export default function Login() {
   return (
     <>
       <Header isDarkMode={isDarkMode} />
-      <div className={`min-h-screen flex items-center justify-center py-12 transition-colors duration-300 ${
+
+      {/* Hidden Google Translate Element */}
+      <div id="google_translate_element_hidden" style={{ display: 'none' }}></div>
+
+      <div className={`min-h-screen flex items-center justify-center py-24 px-6 transition-colors duration-300 ${
         isDarkMode 
           ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
           : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
@@ -123,7 +309,7 @@ export default function Login() {
           {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
 
-        <div className={`p-8 rounded-2xl shadow-2xl w-full max-w-md transition-all duration-300 ${
+        <div className={`p-8 rounded-2xl shadow-2xl w-full max-w-md transition-all duration-300 mt-16 ${
           isDarkMode 
             ? 'bg-slate-900/50 backdrop-blur-sm border border-slate-800/50' 
             : 'bg-white border border-gray-200'
@@ -231,10 +417,12 @@ export default function Login() {
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="flex items-center">
+              <label className="flex items-center cursor-pointer">
                 <input 
-                  type="checkbox" 
-                  className={`mr-2 w-4 h-4 rounded focus:ring-2 ${
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className={`mr-2 w-4 h-4 rounded focus:ring-2 cursor-pointer ${
                     isDarkMode
                       ? 'text-emerald-500 bg-slate-800 border-slate-600 focus:ring-emerald-500'
                       : 'text-blue-600 bg-white border-gray-300 focus:ring-blue-500'

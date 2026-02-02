@@ -245,6 +245,7 @@ function FAQItem({ question, answer, isDarkMode }) {
 export default function LandingPage() {
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [checkingAuth, setCheckingAuth] = useState(true)
+  const [selectedLanguage, setSelectedLanguage] = useState('en')
 
   useEffect(() => {
     const saved = localStorage.getItem('theme')
@@ -254,6 +255,169 @@ export default function LandingPage() {
   useEffect(() => {
     checkAuthentication()
   }, [])
+
+  useEffect(() => {
+    // Load Google Translate script
+    const addScript = () => {
+      if (document.querySelector('script[src*="translate.google.com"]')) return;
+      
+      window.googleTranslateElementInit = function() {
+        new window.google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'en,es,fr,de,it,pt,ru,ja,ko,zh-CN,zh-TW,ar,hi,bn,pa,te,mr,ta,tr,vi,pl,uk,ro,nl,el,cs,sv,hu,fi,da,no',
+          autoDisplay: false
+        }, 'google_translate_element_hidden');
+      };
+      
+      const script = document.createElement('script');
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.body.appendChild(script);
+    };
+
+    setTimeout(addScript, 100);
+
+    // Enhanced styles to fix header overlap
+    const style = document.createElement('style');
+    style.innerHTML = `
+      /* Only hide our hidden translate element */
+      #google_translate_element_hidden {
+        display: none !important;
+      }
+      
+      /* Style the Google Translate banner to look better */
+      .goog-te-banner-frame.skiptranslate {
+        background: ${isDarkMode ? '#1e293b' : '#ffffff'} !important;
+        border-bottom: 1px solid ${isDarkMode ? '#334155' : '#e5e7eb'} !important;
+      }
+      
+      /* Adjust header when Google Translate bar appears */
+      body[style*="top"] header,
+      body[style*="top"] > div > header {
+        top: 40px !important;
+      }
+      
+      /* Adjust fixed elements when translate bar is present */
+      body[style*="top"] .fixed {
+        transition: top 0.3s ease !important;
+      }
+      
+      /* Add extra padding to hero section when translate bar is active */
+      body[style*="top"] .hero-section {
+        padding-top: 9rem !important;
+        transition: padding-top 0.3s ease !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Monitor body.style.top changes to adjust fixed elements
+    const adjustFixedElements = () => {
+      const bodyTop = window.getComputedStyle(document.body).top;
+      const topValue = parseInt(bodyTop) || 0;
+      
+      if (topValue > 0) {
+        // Google Translate bar is active
+        // Find all fixed elements and adjust their top position
+        const fixedElements = document.querySelectorAll('.fixed');
+        fixedElements.forEach(el => {
+          const currentTop = parseInt(window.getComputedStyle(el).top) || 0;
+          if (currentTop < 100) { // Only adjust elements near the top
+            el.style.top = `${currentTop + topValue}px`;
+          }
+        });
+      }
+    };
+
+    // Watch for body style changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+          adjustFixedElements();
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['style']
+    });
+
+    // Also run on interval as backup
+    const intervalId = setInterval(adjustFixedElements, 500);
+
+    return () => {
+      clearInterval(intervalId);
+      const scripts = document.querySelectorAll('script[src*="translate.google.com"]');
+      scripts.forEach(script => script.remove());
+      style.remove();
+      observer.disconnect();
+    };
+  }, [isDarkMode]);
+
+  const changeLanguage = (langCode) => {
+    setSelectedLanguage(langCode);
+    
+    if (langCode === 'en') {
+      // Reset to original language
+      const translateElement = document.querySelector('.goog-te-combo');
+      if (translateElement) {
+        translateElement.value = '';
+        translateElement.dispatchEvent(new Event('change'));
+      }
+      
+      // Remove Google Translate cookies
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname;
+      
+      // Reload the page to reset
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    } else {
+      // Trigger Google Translate for other languages
+      setTimeout(() => {
+        const selectElement = document.querySelector('.goog-te-combo');
+        if (selectElement) {
+          selectElement.value = langCode;
+          selectElement.dispatchEvent(new Event('change'));
+        }
+      }, 500);
+    }
+  };
+
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'fr', name: 'French', flag: '🇫🇷' },
+    { code: 'de', name: 'German', flag: '🇩🇪' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
+    { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+    { code: 'zh-CN', name: 'Chinese (S)', flag: '🇨🇳' },
+    { code: 'zh-TW', name: 'Chinese (T)', flag: '🇹🇼' },
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+    { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+    { code: 'bn', name: 'Bengali', flag: '🇧🇩' },
+    { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
+    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
+    { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
+    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
+    { code: 'pl', name: 'Polish', flag: '🇵🇱' },
+    { code: 'uk', name: 'Ukrainian', flag: '🇺🇦' },
+    { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
+    { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
+    { code: 'el', name: 'Greek', flag: '🇬🇷' },
+    { code: 'cs', name: 'Czech', flag: '🇨🇿' },
+    { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
+    { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
+    { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
+    { code: 'da', name: 'Danish', flag: '🇩🇰' },
+    { code: 'no', name: 'Norwegian', flag: '🇳🇴' }
+  ];
 
   const checkAuthentication = async () => {
     try {
@@ -310,6 +474,41 @@ export default function LandingPage() {
 
       <Header isDarkMode={isDarkMode} />
 
+      {/* Hidden Google Translate Element */}
+      <div id="google_translate_element_hidden" style={{ display: 'none' }}></div>
+
+      {/* Custom Language Selector - Bottom Left */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className={`fixed bottom-6 left-6 z-50 transition-all duration-300`}
+      >
+        <div className={`flex items-center gap-2 p-3 rounded-full ${
+          isDarkMode
+            ? 'bg-slate-800 border border-slate-700'
+            : 'bg-white border border-gray-300 shadow-lg'
+        }`}>
+          <Globe className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'} size={20} />
+          <select
+            value={selectedLanguage}
+            onChange={(e) => changeLanguage(e.target.value)}
+            className={`px-3 py-1 rounded-lg border outline-none cursor-pointer transition-colors text-xl ${
+              isDarkMode
+                ? 'bg-slate-900 border-slate-600 text-white hover:border-emerald-500 focus:border-emerald-500'
+                : 'bg-white border-gray-300 text-gray-900 hover:border-indigo-500 focus:border-indigo-500'
+            }`}
+            style={{ minWidth: '60px' }}
+          >
+            {languages.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.flag}
+              </option>
+            ))}
+          </select>
+        </div>
+      </motion.div>
+
       {/* Theme Toggle Button */}
       <motion.button 
         onClick={toggleTheme}
@@ -325,7 +524,7 @@ export default function LandingPage() {
       </motion.button>
 
       {/* HERO SECTION */}
-      <section className="relative min-h-screen flex items-center px-6 pt-28 pb-20 overflow-hidden">
+      <section className="hero-section relative min-h-screen flex items-center px-6 pt-28 pb-20 overflow-hidden transition-all duration-300">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <div 
