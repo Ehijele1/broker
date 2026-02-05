@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AdminChatWidget from '@/components/AdminChatWidget'
+import AdminInactivityMonitor from '@/components/AdminInactivityMonitor'
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname()
@@ -69,6 +70,8 @@ export default function AdminLayout({ children }) {
 
   return (
     <>
+          {/* Inactivity Monitor - Logs out user after 1 hour of inactivity */}
+          <AdminInactivityMonitor userId={user?.id} />
       {children}
       {showChat && <AdminChatWidget />}
     </>
