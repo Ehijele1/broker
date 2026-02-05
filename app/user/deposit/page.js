@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { 
   Wallet, CreditCard, Building2, Smartphone, Bitcoin,
   DollarSign, CheckCircle, Copy, AlertCircle, Info,
-  TrendingUp, Shield, Clock, ArrowRight, Upload, X
+  TrendingUp, Shield, Clock, ArrowRight, Upload, X, Eye, QrCode
 } from 'lucide-react'
 
 export default function DepositPage() {
@@ -26,6 +26,8 @@ export default function DepositPage() {
   const [cryptoNetworks, setCryptoNetworks] = useState([])
   const [bankDetails, setBankDetails] = useState(null)
   const [networksLoading, setNetworksLoading] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [selectedQRCode, setSelectedQRCode] = useState(null)
 
   // Load theme preference and listen for changes
   useEffect(() => {
@@ -176,6 +178,16 @@ export default function DepositPage() {
     setTimeout(() => setCopiedAddress(false), 2000)
   }
 
+  const viewQRCode = (qrCodeUrl) => {
+    setSelectedQRCode(qrCodeUrl)
+    setShowQRModal(true)
+  }
+
+  const closeQRModal = () => {
+    setShowQRModal(false)
+    setSelectedQRCode(null)
+  }
+
   const handleDeposit = async (e) => {
     e.preventDefault()
     
@@ -281,6 +293,87 @@ export default function DepositPage() {
 
   return (
     <div className="p-4 lg:p-8 space-y-6">
+      {/* QR Code Modal */}
+      {showQRModal && selectedQRCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className={`relative max-w-lg w-full rounded-2xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900 border-purple-800/50' 
+              : 'bg-white border-indigo-200'
+          }`}>
+            <button
+              onClick={closeQRModal}
+              className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${
+                isDarkMode 
+                  ? 'bg-slate-800 hover:bg-slate-700' 
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              <X className={`w-5 h-5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} />
+            </button>
+            
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-3 rounded-xl ${
+                isDarkMode ? 'bg-emerald-500/20' : 'bg-indigo-50'
+              }`}>
+                <QrCode className={`w-6 h-6 ${
+                  isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+                }`} />
+              </div>
+              <div>
+                <h3 className={`text-xl font-bold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Scan QR Code</h3>
+                <p className={`text-sm ${
+                  isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                }`}>
+                  {selectedNetworkData?.name} - {selectedNetworkData?.network}
+                </p>
+              </div>
+            </div>
+
+            <div className={`rounded-xl p-4 border mb-4 ${
+              isDarkMode 
+                ? 'bg-white border-slate-700' 
+                : 'bg-gray-50 border-indigo-200'
+            }`}>
+              <img
+                src={selectedQRCode}
+                alt="QR Code"
+                className="w-full rounded-lg"
+              />
+            </div>
+
+            <div className={`p-4 rounded-xl border ${
+              isDarkMode 
+                ? 'bg-amber-500/10 border-amber-500/30' 
+                : 'bg-amber-50 border-amber-200'
+            }`}>
+              <p className={`text-xs flex items-start gap-2 ${
+                isDarkMode ? 'text-amber-400' : 'text-amber-700'
+              }`}>
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>
+                  Scan this QR code with your wallet app to make the payment. 
+                  Ensure you're sending on the correct network ({selectedNetworkData?.network}).
+                </span>
+              </p>
+            </div>
+
+            <button
+              onClick={closeQRModal}
+              className={`w-full mt-4 px-4 py-3 rounded-xl font-semibold transition-colors ${
+                isDarkMode 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-white' 
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+              }`}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Success Toast */}
       {showSuccess && (
         <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in ${
@@ -551,7 +644,36 @@ export default function DepositPage() {
                             }`} />
                           )}
                         </button>
+                        {selectedNetworkData.qr_code_url && (
+                          <button
+                            onClick={() => viewQRCode(selectedNetworkData.qr_code_url)}
+                            className={`p-2 rounded transition-colors ${
+                              isDarkMode 
+                                ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                : 'bg-indigo-600 hover:bg-indigo-700'
+                            }`}
+                            title="View QR Code"
+                          >
+                            <QrCode className="w-5 h-5 text-white" />
+                          </button>
+                        )}
                       </div>
+                      
+                      {selectedNetworkData.qr_code_url && (
+                        <div className={`mt-3 p-3 rounded-lg border ${
+                          isDarkMode 
+                            ? 'bg-emerald-500/10 border-emerald-500/30' 
+                            : 'bg-emerald-50 border-emerald-200'
+                        }`}>
+                          <p className={`text-xs flex items-center gap-2 ${
+                            isDarkMode ? 'text-emerald-400' : 'text-emerald-700'
+                          }`}>
+                            <QrCode className="w-4 h-4" />
+                            <span>QR Code available! Click the QR button above to scan with your wallet app.</span>
+                          </p>
+                        </div>
+                      )}
+                      
                       <p className={`text-xs mt-3 flex items-start gap-1 ${
                         isDarkMode ? 'text-amber-400' : 'text-amber-700'
                       }`}>

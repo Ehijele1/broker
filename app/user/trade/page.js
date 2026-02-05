@@ -13,6 +13,7 @@ export default function TradePage() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   
   // Trading state
   const [selectedMarket, setSelectedMarket] = useState('Stock')
@@ -75,6 +76,35 @@ export default function TradePage() {
       { symbol: 'FTSE', name: 'FTSE 100', price: 8123.4, change: 0.23 }
     ]
   }
+
+  // Load theme preference and listen for changes
+    useEffect(() => {
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme) {
+        setIsDarkMode(savedTheme === 'dark')
+      }
+  
+      // Listen for theme changes
+      const handleStorageChange = (e) => {
+        if (e.key === 'theme') {
+          setIsDarkMode(e.newValue === 'dark')
+        }
+      }
+  
+      // Listen for custom theme change event
+      const handleThemeChange = () => {
+        const savedTheme = localStorage.getItem('theme')
+        setIsDarkMode(savedTheme === 'dark')
+      }
+  
+      window.addEventListener('storage', handleStorageChange)
+      window.addEventListener('themeChange', handleThemeChange)
+  
+      return () => {
+        window.removeEventListener('storage', handleStorageChange)
+        window.removeEventListener('themeChange', handleThemeChange)
+      }
+    }, [])
 
   useEffect(() => {
     checkUser()
@@ -487,8 +517,16 @@ export default function TradePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}>
+        <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
+          isDarkMode 
+            ? 'border-emerald-500/20 border-t-emerald-500' 
+            : 'border-indigo-200 border-t-indigo-600'
+        }`}></div>
       </div>
     )
   }

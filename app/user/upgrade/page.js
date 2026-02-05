@@ -11,10 +11,38 @@ export default function UpgradePlanPage() {
   const router = useRouter()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   const [upgrading, setUpgrading] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [showSuccess, setShowSuccess] = useState(false)
+
+  // Load theme preference and listen for changes
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'theme') {
+        setIsDarkMode(e.newValue === 'dark')
+      }
+    }
+
+    const handleThemeChange = () => {
+      const savedTheme = localStorage.getItem('theme')
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('themeChange', handleThemeChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('themeChange', handleThemeChange)
+    }
+  }, [])
 
   const plans = [
     {
@@ -24,6 +52,8 @@ export default function UpgradePlanPage() {
       color: 'from-blue-500 to-cyan-500',
       borderColor: 'border-blue-500/30',
       bgColor: 'from-blue-500/10 to-cyan-500/10',
+      lightBorderColor: 'border-blue-300',
+      lightBgColor: 'bg-blue-50',
       minAmount: '$500',
       maxAmount: '$5,000',
       features: [
@@ -44,6 +74,8 @@ export default function UpgradePlanPage() {
       color: 'from-purple-500 to-pink-500',
       borderColor: 'border-purple-500/30',
       bgColor: 'from-purple-500/10 to-pink-500/10',
+      lightBorderColor: 'border-purple-300',
+      lightBgColor: 'bg-purple-50',
       popular: true,
       minAmount: '$5,000',
       maxAmount: '$50,000',
@@ -65,6 +97,8 @@ export default function UpgradePlanPage() {
       color: 'from-amber-500 to-orange-500',
       borderColor: 'border-amber-500/30',
       bgColor: 'from-amber-500/10 to-orange-500/10',
+      lightBorderColor: 'border-amber-300',
+      lightBgColor: 'bg-amber-50',
       minAmount: '$50,000',
       maxAmount: 'Above',
       features: [
@@ -144,8 +178,16 @@ export default function UpgradePlanPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}>
+        <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
+          isDarkMode 
+            ? 'border-emerald-500/20 border-t-emerald-500' 
+            : 'border-indigo-200 border-t-indigo-600'
+        }`}></div>
       </div>
     )
   }
@@ -156,7 +198,11 @@ export default function UpgradePlanPage() {
     <div className="p-4 lg:p-8 space-y-6">
       {/* Success Toast */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in ${
+          isDarkMode 
+            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' 
+            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+        }`}>
           <CheckCircle className="w-6 h-6" />
           <div>
             <p className="font-bold">Plan Updated!</p>
@@ -167,26 +213,44 @@ export default function UpgradePlanPage() {
 
       {/* Header */}
       <div className="text-center max-w-3xl mx-auto">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full mb-4">
+        <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+          isDarkMode 
+            ? 'bg-gradient-to-br from-emerald-500 to-teal-600' 
+            : 'bg-gradient-to-br from-blue-600 to-indigo-600'
+        }`}>
           <TrendingUp className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-4xl font-bold mb-3">Upgrade Your Plan</h1>
-        <p className="text-slate-400 text-lg">
+        <h1 className={`text-4xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          Upgrade Your Plan
+        </h1>
+        <p className={`text-lg ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
           Choose the perfect plan to match your trading goals and unlock powerful features
         </p>
       </div>
 
       {/* Current Plan Badge */}
       <div className="max-w-3xl mx-auto">
-        <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800/50 flex items-center justify-between">
+        <div className={`rounded-xl p-4 border flex items-center justify-between ${
+          isDarkMode 
+            ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+            : 'bg-white border-indigo-200 shadow-sm'
+        }`}>
           <div className="flex items-center gap-3">
-            <Shield className="w-6 h-6 text-emerald-400" />
+            <Shield className={`w-6 h-6 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
             <div>
-              <p className="text-sm text-slate-400">Current Plan</p>
-              <p className="font-bold text-lg capitalize">{currentPlan}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                Current Plan
+              </p>
+              <p className={`font-bold text-lg capitalize ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                {currentPlan}
+              </p>
             </div>
           </div>
-          <span className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-semibold border border-emerald-500/30">
+          <span className={`px-4 py-2 rounded-lg text-sm font-semibold border ${
+            isDarkMode 
+              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+              : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+          }`}>
             Active
           </span>
         </div>
@@ -200,43 +264,63 @@ export default function UpgradePlanPage() {
           return (
             <div
               key={plan.id}
-              className={`relative bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border transition-all ${
+              className={`relative rounded-2xl p-6 border transition-all ${
                 plan.popular 
-                  ? 'border-purple-500/50 shadow-lg shadow-purple-500/20' 
-                  : `border-slate-800/50 ${!isCurrentPlan && 'hover:border-slate-700'}`
-              } ${isCurrentPlan && 'ring-2 ring-emerald-500/50'}`}
+                  ? isDarkMode
+                    ? 'border-purple-500/50 shadow-lg shadow-purple-500/20 bg-slate-900/50 backdrop-blur-sm'
+                    : 'border-purple-300 shadow-lg shadow-purple-200/50 bg-white'
+                  : isDarkMode
+                    ? `bg-slate-900/50 backdrop-blur-sm border-slate-800/50 ${!isCurrentPlan && 'hover:border-slate-700'}`
+                    : `bg-white border-indigo-200 shadow-sm ${!isCurrentPlan && 'hover:border-indigo-300 hover:shadow-lg'}`
+              } ${isCurrentPlan && (isDarkMode ? 'ring-2 ring-emerald-500/50' : 'ring-2 ring-indigo-500')}`}
             >
               {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs font-bold">
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold ${
+                  isDarkMode 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' 
+                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                }`}>
                   MOST POPULAR
                 </div>
               )}
 
               {/* Active Badge */}
               {isCurrentPlan && (
-                <div className="absolute -top-3 right-4 px-4 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-xs font-bold flex items-center gap-1">
+                <div className={`absolute -top-3 right-4 px-4 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                  isDarkMode 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                }`}>
                   <CheckCircle className="w-3 h-3" />
                   ACTIVE
                 </div>
               )}
 
               {/* Plan Header */}
-              <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-4`}>
+              <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center mb-4 text-white`}>
                 {plan.icon}
               </div>
 
-              <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+              <h3 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                {plan.name}
+              </h3>
               
               {/* Amount Range */}
-              <div className={`mb-4 p-3 rounded-lg bg-gradient-to-br ${plan.bgColor} border ${plan.borderColor}`}>
-                <p className="text-xs text-slate-400 mb-1">Trading Amount Range</p>
-                <p className="text-lg font-bold">
+              <div className={`mb-4 p-3 rounded-lg border ${
+                isDarkMode 
+                  ? `bg-gradient-to-br ${plan.bgColor} ${plan.borderColor}` 
+                  : `${plan.lightBgColor} ${plan.lightBorderColor}`
+              }`}>
+                <p className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                  Trading Amount Range
+                </p>
+                <p className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                   {plan.minAmount} - {plan.maxAmount}
                 </p>
               </div>
 
-              <p className="text-slate-400 text-sm mb-6">
+              <p className={`text-sm mb-6 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                 {plan.id === 'basic' && 'Perfect for getting started'}
                 {plan.id === 'premium' && 'Best for active traders'}
                 {plan.id === 'vip' && 'Ultimate trading experience'}
@@ -247,11 +331,19 @@ export default function UpgradePlanPage() {
                 {plan.features.map((feature, index) => (
                   <div key={index} className="flex items-start gap-3">
                     {feature.included ? (
-                      <Check className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                      <Check className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                        isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+                      }`} />
                     ) : (
-                      <X className="w-5 h-5 text-slate-600 flex-shrink-0 mt-0.5" />
+                      <X className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                        isDarkMode ? 'text-slate-600' : 'text-gray-300'
+                      }`} />
                     )}
-                    <span className={`text-sm ${feature.included ? 'text-white' : 'text-slate-600'}`}>
+                    <span className={`text-sm ${
+                      feature.included 
+                        ? isDarkMode ? 'text-white' : 'text-gray-900'
+                        : isDarkMode ? 'text-slate-600' : 'text-gray-400'
+                    }`}>
                       {feature.text}
                     </span>
                   </div>
@@ -262,14 +354,18 @@ export default function UpgradePlanPage() {
               {isCurrentPlan ? (
                 <button
                   disabled
-                  className="w-full py-3 bg-slate-800 rounded-lg font-semibold text-slate-500 cursor-not-allowed"
+                  className={`w-full py-3 rounded-lg font-semibold cursor-not-allowed ${
+                    isDarkMode 
+                      ? 'bg-slate-800 text-slate-500' 
+                      : 'bg-gray-100 text-gray-400'
+                  }`}
                 >
                   Current Plan
                 </button>
               ) : (
                 <button
                   onClick={() => handleUpgradeClick(plan)}
-                  className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r ${plan.color} hover:shadow-lg`}
+                  className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-white bg-gradient-to-r ${plan.color} hover:shadow-lg`}
                 >
                   Upgrade to {plan.name}
                   <ArrowRight className="w-5 h-5" />
@@ -282,28 +378,54 @@ export default function UpgradePlanPage() {
 
       {/* Features Comparison */}
       <div className="max-w-5xl mx-auto mt-12">
-        <h2 className="text-2xl font-bold text-center mb-8">Why Upgrade?</h2>
+        <h2 className={`text-2xl font-bold text-center mb-8 ${
+          isDarkMode ? 'text-white' : 'text-gray-900'
+        }`}>Why Upgrade?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-900/30 rounded-xl p-6 border border-slate-800/50">
-            <Users className="w-10 h-10 text-blue-400 mb-4" />
-            <h3 className="font-bold text-lg mb-2">More Trading Capacity</h3>
-            <p className="text-sm text-slate-400">
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/30 border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <Users className={`w-10 h-10 mb-4 ${
+              isDarkMode ? 'text-blue-400' : 'text-blue-600'
+            }`} />
+            <h3 className={`font-bold text-lg mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              More Trading Capacity
+            </h3>
+            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
               Execute more trades simultaneously and maximize your trading opportunities
             </p>
           </div>
 
-          <div className="bg-slate-900/30 rounded-xl p-6 border border-slate-800/50">
-            <TrendingUp className="w-10 h-10 text-purple-400 mb-4" />
-            <h3 className="font-bold text-lg mb-2">Better Fee Structure</h3>
-            <p className="text-sm text-slate-400">
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/30 border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <TrendingUp className={`w-10 h-10 mb-4 ${
+              isDarkMode ? 'text-purple-400' : 'text-purple-600'
+            }`} />
+            <h3 className={`font-bold text-lg mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Better Fee Structure
+            </h3>
+            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
               Enjoy competitive trading fees that grow with your plan level
             </p>
           </div>
 
-          <div className="bg-slate-900/30 rounded-xl p-6 border border-slate-800/50">
-            <Headphones className="w-10 h-10 text-amber-400 mb-4" />
-            <h3 className="font-bold text-lg mb-2">Premium Support</h3>
-            <p className="text-sm text-slate-400">
+          <div className={`rounded-xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/30 border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <Headphones className={`w-10 h-10 mb-4 ${
+              isDarkMode ? 'text-amber-400' : 'text-amber-600'
+            }`} />
+            <h3 className={`font-bold text-lg mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              Premium Support
+            </h3>
+            <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
               Get faster response times and dedicated assistance when you need it
             </p>
           </div>
@@ -313,24 +435,40 @@ export default function UpgradePlanPage() {
       {/* Confirmation Modal */}
       {showConfirmModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 rounded-2xl max-w-md w-full p-6 border border-slate-800/50">
-            <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${selectedPlan.color} flex items-center justify-center mx-auto mb-4`}>
+          <div className={`rounded-2xl max-w-md w-full p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900 border-slate-800/50' 
+              : 'bg-white border-indigo-200'
+          }`}>
+            <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${selectedPlan.color} flex items-center justify-center mx-auto mb-4 text-white`}>
               {selectedPlan.icon}
             </div>
 
-            <h3 className="text-2xl font-bold text-center mb-2">Upgrade to {selectedPlan.name}?</h3>
-            <p className="text-slate-400 text-center mb-6">
+            <h3 className={`text-2xl font-bold text-center mb-2 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Upgrade to {selectedPlan.name}?</h3>
+            <p className={`text-center mb-6 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
               Your plan will be updated immediately and you'll get access to all {selectedPlan.name} features.
             </p>
 
-            <div className="bg-slate-800/50 rounded-lg p-4 mb-6">
+            <div className={`rounded-lg p-4 mb-6 ${
+              isDarkMode ? 'bg-slate-800/50' : 'bg-indigo-50'
+            }`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400">Current Plan</span>
-                <span className="font-semibold capitalize">{currentPlan}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+                  Current Plan
+                </span>
+                <span className={`font-semibold capitalize ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{currentPlan}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">New Plan</span>
-                <span className="font-semibold text-emerald-400">{selectedPlan.name}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+                  New Plan
+                </span>
+                <span className={`font-semibold ${
+                  isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+                }`}>{selectedPlan.name}</span>
               </div>
             </div>
 
@@ -338,14 +476,18 @@ export default function UpgradePlanPage() {
               <button
                 onClick={() => setShowConfirmModal(false)}
                 disabled={upgrading}
-                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className={`flex-1 py-3 rounded-lg font-semibold transition-colors disabled:opacity-50 ${
+                  isDarkMode 
+                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                }`}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmUpgrade}
                 disabled={upgrading}
-                className={`flex-1 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 bg-gradient-to-r ${selectedPlan.color} flex items-center justify-center gap-2`}
+                className={`flex-1 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 bg-gradient-to-r ${selectedPlan.color} flex items-center justify-center gap-2 text-white`}
               >
                 {upgrading ? (
                   <>

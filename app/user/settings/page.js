@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [successMessage, setSuccessMessage] = useState('Settings Updated!')
   const [activeTab, setActiveTab] = useState('profile')
+  const [isDarkMode, setIsDarkMode] = useState(true)
   
   // Profile form state
   const [fullName, setFullName] = useState('')
@@ -45,6 +46,35 @@ export default function SettingsPage() {
   const [tradeAlerts, setTradeAlerts] = useState(true)
   const [depositAlerts, setDepositAlerts] = useState(true)
   const [withdrawalAlerts, setWithdrawalAlerts] = useState(true)
+
+  // Load theme preference and listen for changes
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    // Listen for theme changes
+    const handleStorageChange = (e) => {
+      if (e.key === 'theme') {
+        setIsDarkMode(e.newValue === 'dark')
+      }
+    }
+
+    // Listen for custom theme change event
+    const handleThemeChange = () => {
+      const savedTheme = localStorage.getItem('theme')
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('themeChange', handleThemeChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('themeChange', handleThemeChange)
+    }
+  }, [])
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: <User className="w-5 h-5" /> },
@@ -549,8 +579,16 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}>
+        <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
+          isDarkMode 
+            ? 'border-emerald-500/20 border-t-emerald-500' 
+            : 'border-indigo-200 border-t-indigo-600'
+        }`}></div>
       </div>
     )
   }
@@ -559,51 +597,59 @@ export default function SettingsPage() {
     <div className="p-4 lg:p-8 space-y-6">
       {/* Success Toast */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
-          <CheckCircle className="w-6 h-6" />
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in ${
+          isDarkMode
+            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
+            : 'bg-white border-2 border-indigo-500 text-gray-900'
+        }`}>
+          <CheckCircle className={`w-6 h-6 ${isDarkMode ? 'text-white' : 'text-indigo-600'}`} />
           <div>
             <p className="font-bold">{successMessage}</p>
-            <p className="text-sm opacity-90">Your changes have been saved</p>
+            <p className={`text-sm ${isDarkMode ? 'opacity-90' : 'text-gray-600'}`}>Your changes have been saved</p>
           </div>
         </div>
       )}
 
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold mb-2">Account Settings</h1>
-        <p className="text-slate-400">Manage your account settings and preferences</p>
+        <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Account Settings</h1>
+        <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>Manage your account settings and preferences</p>
       </div>
 
-      {/* Debug Info (Remove in production) 
-      <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-4 border border-slate-800/50">
-        <p className="text-xs text-slate-400">
-          <strong>Debug Info:</strong> DB Currency: {profile?.currency} | Form Currency: {currency} | Balance: {profile?.balance}
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          <strong>LocalStorage:</strong> {JSON.stringify(getCurrencyFromLocalStorage(profile?.id))}
-        </p>
-      </div> */}
-
       {/* Profile Header Card */}
-      <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
+      <div className={`rounded-2xl p-6 border ${
+        isDarkMode
+          ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30'
+          : 'bg-white border-indigo-200 shadow-sm'
+      }`}>
         <div className="flex items-center gap-4">
           <div className="relative">
             {photoPreview ? (
               <img 
                 src={photoPreview} 
                 alt="Profile" 
-                className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500"
+                className={`w-20 h-20 rounded-full object-cover border-2 ${
+                  isDarkMode ? 'border-emerald-500' : 'border-indigo-500'
+                }`}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-2xl font-bold">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                  : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
+              }`}>
                 {profile.full_name?.charAt(0) || 'U'}
               </div>
             )}
             <button
               onClick={() => setShowPhotoMenu(!showPhotoMenu)}
-              className="absolute bottom-0 right-0 p-2 bg-slate-800 hover:bg-slate-700 rounded-full border-2 border-slate-900 transition-colors"
+              className={`absolute bottom-0 right-0 p-2 rounded-full border-2 transition-colors ${
+                isDarkMode
+                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-900'
+                  : 'bg-white hover:bg-indigo-50 border-indigo-200'
+              }`}
             >
-              <Camera className="w-4 h-4" />
+              <Camera className={`w-4 h-4 ${isDarkMode ? 'text-white' : 'text-indigo-600'}`} />
             </button>
 
             {showPhotoMenu && (
@@ -612,30 +658,46 @@ export default function SettingsPage() {
                   className="fixed inset-0 z-40" 
                   onClick={() => setShowPhotoMenu(false)}
                 ></div>
-                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className={`absolute top-full right-0 mt-2 w-48 border rounded-lg shadow-xl z-50 overflow-hidden ${
+                  isDarkMode
+                    ? 'bg-slate-800 border-slate-700'
+                    : 'bg-white border-indigo-200'
+                }`}>
                   {photoPreview && (
                     <button
                       onClick={handleViewPhoto}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-left"
+                      className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
+                        isDarkMode
+                          ? 'hover:bg-slate-700 text-white'
+                          : 'hover:bg-indigo-50 text-gray-900'
+                      }`}
                     >
-                      <Eye className="w-4 h-4 text-blue-400" />
+                      <Eye className={`w-4 h-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                       <span className="text-sm">View Photo</span>
                     </button>
                   )}
                   <button
                     onClick={handleChangePhoto}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-left"
+                    className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
+                      isDarkMode
+                        ? 'hover:bg-slate-700 text-white'
+                        : 'hover:bg-indigo-50 text-gray-900'
+                    }`}
                   >
-                    <Upload className="w-4 h-4 text-emerald-400" />
+                    <Upload className={`w-4 h-4 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
                     <span className="text-sm">{photoPreview ? 'Change Photo' : 'Add Photo'}</span>
                   </button>
                   {photoPreview && (
                     <button
                       onClick={handleDeletePhoto}
                       disabled={uploadingPhoto}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors text-left disabled:opacity-50"
+                      className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left disabled:opacity-50 ${
+                        isDarkMode
+                          ? 'hover:bg-slate-700 text-white'
+                          : 'hover:bg-indigo-50 text-gray-900'
+                      }`}
                     >
-                      <X className="w-4 h-4 text-rose-400" />
+                      <X className={`w-4 h-4 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`} />
                       <span className="text-sm">Delete Photo</span>
                     </button>
                   )}
@@ -652,23 +714,31 @@ export default function SettingsPage() {
             />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">{profile.full_name}</h2>
-            <p className="text-slate-400">@{profile.username}</p>
-            <p className="text-sm text-emerald-400 mt-1">{profile.email}</p>
+            <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{profile.full_name}</h2>
+            <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>@{profile.username}</p>
+            <p className={`text-sm mt-1 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`}>{profile.email}</p>
           </div>
           {profilePhoto && (
             <div className="flex gap-2">
               <button
                 onClick={handleRemovePhoto}
                 disabled={uploadingPhoto}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                  isDarkMode
+                    ? 'bg-slate-800 hover:bg-slate-700'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
               <button
                 onClick={handleUploadPhoto}
                 disabled={uploadingPhoto}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 ${
+                  isDarkMode
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
               >
                 {uploadingPhoto ? (
                   <>
@@ -692,7 +762,11 @@ export default function SettingsPage() {
           <div className="relative max-w-3xl w-full">
             <button
               onClick={() => setShowPhotoModal(false)}
-              className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors z-10"
+              className={`absolute top-4 right-4 p-2 rounded-full transition-colors z-10 ${
+                isDarkMode
+                  ? 'bg-slate-800 hover:bg-slate-700'
+                  : 'bg-white hover:bg-gray-100'
+              }`}
             >
               <X className="w-6 h-6" />
             </button>
@@ -713,8 +787,12 @@ export default function SettingsPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30'
-                : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700'
+                ? isDarkMode
+                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-white text-indigo-600 border-2 border-indigo-500 shadow-sm'
+                : isDarkMode
+                  ? 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700'
+                  : 'bg-white text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 border border-indigo-200 shadow-sm'
             }`}
           >
             {tab.icon}
@@ -723,16 +801,20 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* Tab Content - Same as before, keeping it shorter for readability */}
+      {/* Tab Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           {activeTab === 'profile' && (
-            <form onSubmit={handleUpdateProfile} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
+            <form onSubmit={handleUpdateProfile} className={`rounded-2xl p-6 border space-y-6 ${
+              isDarkMode
+                ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50'
+                : 'bg-white border-indigo-200 shadow-sm'
+            }`}>
               <div>
-                <h3 className="text-xl font-bold mb-4">Personal Information</h3>
+                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Personal Information</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <User className="w-4 h-4 inline mr-2" />
                       Full Name
                     </label>
@@ -740,13 +822,17 @@ export default function SettingsPage() {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                          : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                      }`}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <User className="w-4 h-4 inline mr-2" />
                       Username
                     </label>
@@ -754,13 +840,17 @@ export default function SettingsPage() {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                          : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                      }`}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <Mail className="w-4 h-4 inline mr-2" />
                       Email Address
                     </label>
@@ -768,13 +858,17 @@ export default function SettingsPage() {
                       type="email"
                       value={email}
                       disabled
-                      className="w-full px-4 py-3 bg-slate-800/30 border border-slate-700 rounded-lg text-slate-500 cursor-not-allowed"
+                      className={`w-full px-4 py-3 border rounded-lg cursor-not-allowed ${
+                        isDarkMode
+                          ? 'bg-slate-800/30 border-slate-700 text-slate-500'
+                          : 'bg-gray-100 border-gray-300 text-gray-500'
+                      }`}
                     />
-                    <p className="text-xs text-slate-400 mt-1">Email cannot be changed</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Email cannot be changed</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <Phone className="w-4 h-4 inline mr-2" />
                       Phone Number
                     </label>
@@ -782,12 +876,16 @@ export default function SettingsPage() {
                       type="tel"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                          : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <MapPin className="w-4 h-4 inline mr-2" />
                       Country
                     </label>
@@ -795,26 +893,34 @@ export default function SettingsPage() {
                       type="text"
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                          : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <DollarSign className="w-4 h-4 inline mr-2" />
                       Preferred Currency
                     </label>
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                          : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     >
                       {currencies.map((curr) => (
                         <option key={curr} value={curr}>{curr}</option>
                       ))}
                     </select>
                     {currency !== profile.currency && (
-                      <p className="text-xs text-amber-400 mt-1">
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
                         ⚠️ Your balance will be converted from {profile.currency} to {currency}
                       </p>
                     )}
@@ -825,7 +931,11 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-all disabled:cursor-not-allowed"
+                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all disabled:cursor-not-allowed ${
+                  isDarkMode
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 text-white'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white'
+                }`}
               >
                 {saving ? (
                   <>
@@ -842,14 +952,18 @@ export default function SettingsPage() {
             </form>
           )}
 
-          {/* Security Tab*/}
+          {/* Security Tab */}
           {activeTab === 'security' && (
-            <form onSubmit={handleChangePassword} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
+            <form onSubmit={handleChangePassword} className={`rounded-2xl p-6 border space-y-6 ${
+              isDarkMode
+                ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50'
+                : 'bg-white border-indigo-200 shadow-sm'
+            }`}>
               <div>
-                <h3 className="text-xl font-bold mb-4">Change Password</h3>
+                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Change Password</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <Lock className="w-4 h-4 inline mr-2" />
                       Current Password
                     </label>
@@ -858,13 +972,19 @@ export default function SettingsPage() {
                         type={showCurrentPassword ? "text" : "password"}
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-12"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 pr-12 ${
+                          isDarkMode
+                            ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                            : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                        }`}
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                        className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
+                          isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-900'
+                        }`}
                       >
                         {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -872,7 +992,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <Key className="w-4 h-4 inline mr-2" />
                       New Password
                     </label>
@@ -881,23 +1001,29 @@ export default function SettingsPage() {
                         type={showNewPassword ? "text" : "password"}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-12"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 pr-12 ${
+                          isDarkMode
+                            ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                            : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                        }`}
                         required
                         minLength={6}
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                        className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
+                          isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-900'
+                        }`}
                       >
                         {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">Must be at least 6 characters</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Must be at least 6 characters</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <Key className="w-4 h-4 inline mr-2" />
                       Confirm New Password
                     </label>
@@ -906,13 +1032,19 @@ export default function SettingsPage() {
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-12"
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 pr-12 ${
+                          isDarkMode
+                            ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                            : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                        }`}
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                        className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${
+                          isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-900'
+                        }`}
                       >
                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -920,7 +1052,7 @@ export default function SettingsPage() {
                   </div>
 
                   {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-sm text-rose-400 flex items-center gap-2">
+                    <p className={`text-sm flex items-center gap-2 ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>
                       <AlertCircle className="w-4 h-4" />
                       Passwords do not match
                     </p>
@@ -928,18 +1060,22 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-4">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-emerald-400" />
+              <div className={`border rounded-lg p-4 ${
+                isDarkMode
+                  ? 'bg-slate-800/30 border-slate-700'
+                  : 'bg-indigo-50 border-indigo-200'
+              }`}>
+                <h4 className={`font-semibold mb-2 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <Shield className={`w-5 h-5 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
                   Password Requirements
                 </h4>
-                <ul className="space-y-1 text-sm text-slate-400">
+                <ul className={`space-y-1 text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-700'}`}>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle className={`w-4 h-4 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
                     At least 6 characters long
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle className={`w-4 h-4 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
                     Include letters and numbers for better security
                   </li>
                 </ul>
@@ -948,7 +1084,11 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={saving || !newPassword || !confirmPassword || newPassword !== confirmPassword}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-all disabled:cursor-not-allowed"
+                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all disabled:cursor-not-allowed ${
+                  isDarkMode
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 text-white'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white'
+                }`}
               >
                 {saving ? (
                   <>
@@ -965,28 +1105,38 @@ export default function SettingsPage() {
             </form>
           )}
 
-          {/* Notification Tab*/}
+          {/* Notification Tab */}
           {activeTab === 'notifications' && (
-            <form onSubmit={handleUpdateNotifications} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
+            <form onSubmit={handleUpdateNotifications} className={`rounded-2xl p-6 border space-y-6 ${
+              isDarkMode
+                ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50'
+                : 'bg-white border-indigo-200 shadow-sm'
+            }`}>
               <div>
-                <h3 className="text-xl font-bold mb-4">Notification Preferences</h3>
-                <p className="text-sm text-slate-400 mb-6">Choose what notifications you want to receive</p>
+                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Notification Preferences</h3>
+                <p className={`text-sm mb-6 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Choose what notifications you want to receive</p>
                 
                 <div className="space-y-6">
                   {/* Email Notifications */}
-                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-slate-800/30 border-slate-700'
+                      : 'bg-indigo-50 border-indigo-200'
+                  }`}>
                     <div className="flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-emerald-400 mt-1" />
+                      <Mail className={`w-5 h-5 mt-1 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
                       <div>
-                        <h4 className="font-semibold">Email Notifications</h4>
-                        <p className="text-sm text-slate-400 mt-1">Receive updates and alerts via email</p>
+                        <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Email Notifications</h4>
+                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Receive updates and alerts via email</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setEmailNotifications(!emailNotifications)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        emailNotifications ? 'bg-emerald-500' : 'bg-slate-600'
+                        emailNotifications 
+                          ? isDarkMode ? 'bg-emerald-500' : 'bg-indigo-600'
+                          : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
@@ -998,19 +1148,25 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Trade Alerts */}
-                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-slate-800/30 border-slate-700'
+                      : 'bg-indigo-50 border-indigo-200'
+                  }`}>
                     <div className="flex items-start gap-3">
-                      <Activity className="w-5 h-5 text-blue-400 mt-1" />
+                      <Activity className={`w-5 h-5 mt-1 ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`} />
                       <div>
-                        <h4 className="font-semibold">Trade Alerts</h4>
-                        <p className="text-sm text-slate-400 mt-1">Get notified when trades are executed, closed, or reach profit/loss targets</p>
+                        <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Trade Alerts</h4>
+                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Get notified when trades are executed, closed, or reach profit/loss targets</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setTradeAlerts(!tradeAlerts)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        tradeAlerts ? 'bg-emerald-500' : 'bg-slate-600'
+                        tradeAlerts 
+                          ? isDarkMode ? 'bg-emerald-500' : 'bg-indigo-600'
+                          : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
@@ -1022,19 +1178,25 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Deposit Alerts */}
-                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-slate-800/30 border-slate-700'
+                      : 'bg-indigo-50 border-indigo-200'
+                  }`}>
                     <div className="flex items-start gap-3">
-                      <CreditCard className="w-5 h-5 text-purple-400 mt-1" />
+                      <CreditCard className={`w-5 h-5 mt-1 ${isDarkMode ? 'text-purple-400' : 'text-indigo-600'}`} />
                       <div>
-                        <h4 className="font-semibold">Deposit Alerts</h4>
-                        <p className="text-sm text-slate-400 mt-1">Receive notifications about deposit status and confirmations</p>
+                        <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Deposit Alerts</h4>
+                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Receive notifications about deposit status and confirmations</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setDepositAlerts(!depositAlerts)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        depositAlerts ? 'bg-emerald-500' : 'bg-slate-600'
+                        depositAlerts 
+                          ? isDarkMode ? 'bg-emerald-500' : 'bg-indigo-600'
+                          : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
@@ -1046,19 +1208,25 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Withdrawal Alerts */}
-                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-slate-800/30 border-slate-700'
+                      : 'bg-indigo-50 border-indigo-200'
+                  }`}>
                     <div className="flex items-start gap-3">
-                      <Wallet className="w-5 h-5 text-amber-400 mt-1" />
+                      <Wallet className={`w-5 h-5 mt-1 ${isDarkMode ? 'text-amber-400' : 'text-indigo-600'}`} />
                       <div>
-                        <h4 className="font-semibold">Withdrawal Alerts</h4>
-                        <p className="text-sm text-slate-400 mt-1">Stay updated on withdrawal requests, approvals, and completions</p>
+                        <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Withdrawal Alerts</h4>
+                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Stay updated on withdrawal requests, approvals, and completions</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setWithdrawalAlerts(!withdrawalAlerts)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        withdrawalAlerts ? 'bg-emerald-500' : 'bg-slate-600'
+                        withdrawalAlerts 
+                          ? isDarkMode ? 'bg-emerald-500' : 'bg-indigo-600'
+                          : isDarkMode ? 'bg-slate-600' : 'bg-gray-300'
                       }`}
                     >
                       <span
@@ -1070,30 +1238,44 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Security Alerts (Always On) */}
-                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-emerald-500/30">
+                  <div className={`flex items-center justify-between p-4 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-slate-800/30 border-slate-700'
+                      : 'bg-indigo-50 border-indigo-200'
+                  }`}>
                     <div className="flex items-start gap-3">
-                      <Shield className="w-5 h-5 text-emerald-400 mt-1" />
+                      <Shield className={`w-5 h-5 mt-1 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
                       <div>
-                        <h4 className="font-semibold flex items-center gap-2">
+                        <h4 className={`font-semibold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                           Security Alerts
-                          <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full">Always On</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            isDarkMode
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}>Always On</span>
                         </h4>
-                        <p className="text-sm text-slate-400 mt-1">Important security notifications (cannot be disabled)</p>
+                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Important security notifications (cannot be disabled)</p>
                       </div>
                     </div>
-                    <div className="relative w-14 h-7 rounded-full bg-emerald-500 opacity-50 cursor-not-allowed">
+                    <div className={`relative w-14 h-7 rounded-full opacity-50 cursor-not-allowed ${
+                      isDarkMode ? 'bg-emerald-500' : 'bg-indigo-600'
+                    }`}>
                       <span className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full translate-x-7" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <div className={`border rounded-lg p-4 ${
+                isDarkMode
+                  ? 'bg-blue-500/10 border-blue-500/30'
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
                 <div className="flex items-start gap-3">
-                  <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
+                  <Bell className={`w-5 h-5 mt-0.5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
                   <div>
-                    <h4 className="font-semibold text-blue-400">Notification Tip</h4>
-                    <p className="text-sm text-slate-300 mt-1">
+                    <h4 className={`font-semibold ${isDarkMode ? 'text-blue-400' : 'text-blue-700'}`}>Notification Tip</h4>
+                    <p className={`text-sm mt-1 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                       Keep notifications enabled to stay updated on important account activities and never miss critical alerts.
                     </p>
                   </div>
@@ -1103,7 +1285,11 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-all disabled:cursor-not-allowed"
+                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all disabled:cursor-not-allowed ${
+                  isDarkMode
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 text-white'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white'
+                }`}
               >
                 {saving ? (
                   <>
@@ -1120,29 +1306,37 @@ export default function SettingsPage() {
             </form>
           )}
 
-          {/* Other tabs remain the same... */}
+          {/* Preferences Tab */}
           {activeTab === 'preferences' && (
-            <form onSubmit={handleUpdatePreferences} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 space-y-6">
+            <form onSubmit={handleUpdatePreferences} className={`rounded-2xl p-6 border space-y-6 ${
+              isDarkMode
+                ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50'
+                : 'bg-white border-indigo-200 shadow-sm'
+            }`}>
               <div>
-                <h3 className="text-xl font-bold mb-4">Display Preferences</h3>
+                <h3 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Display Preferences</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                       <DollarSign className="w-4 h-4 inline mr-2" />
                       Default Currency
                     </label>
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500'
+                          : 'bg-white border-indigo-300 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     >
                       {currencies.map((curr) => (
                         <option key={curr} value={curr}>{curr}</option>
                       ))}
                     </select>
-                    <p className="text-xs text-slate-400 mt-1">All amounts will be displayed in this currency</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>All amounts will be displayed in this currency</p>
                     {currency !== profile.currency && (
-                      <p className="text-xs text-amber-400 mt-1">
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>
                         ⚠️ Your balance will be converted from {profile.currency} to {currency}
                       </p>
                     )}
@@ -1153,7 +1347,11 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-all disabled:cursor-not-allowed"
+                className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all disabled:cursor-not-allowed ${
+                  isDarkMode
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 text-white'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white'
+                }`}
               >
                 {saving ? (
                   <>
@@ -1173,23 +1371,17 @@ export default function SettingsPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
-            <h3 className="font-bold mb-4">Account Status</h3>
+          <div className={`rounded-2xl p-6 border ${
+            isDarkMode
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50'
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <h3 className={`font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Account Status</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Email Verified</span>
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
+                <span className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Email Verified</span>
+                <CheckCircle className={`w-5 h-5 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`} />
               </div>
-             {/*<div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Phone Verified</span>
-                <AlertCircle className="w-5 h-5 text-amber-400" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">KYC Status</span>
-                <span className="text-xs px-2 py-1 bg-amber-500/20 text-amber-400 rounded-full">
-                  {profile.kyc_status || 'Pending'}
-                </span>
-              </div>*/} 
             </div>
           </div>
         </div>

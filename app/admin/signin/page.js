@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -11,6 +11,35 @@ export default function AdminSignIn() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [checking, setChecking] = useState(true)
+
+  // Check if admin is already authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+          
+          if (profile?.role === 'admin') {
+            router.push('/admin/dashboard')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+      } finally {
+        setChecking(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   const handleChange = (e) => {
     setFormData({
@@ -49,13 +78,21 @@ export default function AdminSignIn() {
         throw new Error('Access denied. Admin credentials required.')
       }
 
-
       // If we get here, user is admin
       router.push('/admin/dashboard')
     } catch (error) {
       setError(error.message)
       setLoading(false)
     }
+  }
+
+  // Show loading state while checking authentication
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100">
+        <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+      </div>
+    )
   }
 
   return (

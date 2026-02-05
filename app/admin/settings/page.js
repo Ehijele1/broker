@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { 
   Bitcoin, Building2, Plus, Edit, Trash2, Save, X,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, Upload, Image as ImageIcon, Eye
 } from 'lucide-react'
 
 export default function AdminSettings() {
@@ -24,8 +24,12 @@ export default function AdminSettings() {
     address: '',
     min_amount: '',
     color: 'text-orange-500',
-    is_active: true
+    is_active: true,
+    qr_code_url: ''
   })
+  const [qrCodeFile, setQrCodeFile] = useState(null)
+  const [qrCodePreview, setQrCodePreview] = useState(null)
+  const [uploadingQR, setUploadingQR] = useState(false)
 
   // Bank form state
   const [showBankForm, setShowBankForm] = useState(false)
@@ -40,6 +44,8 @@ export default function AdminSettings() {
   })
 
   const [successMessage, setSuccessMessage] = useState('')
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [selectedQRImage, setSelectedQRImage] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -71,16 +77,91 @@ export default function AdminSettings() {
     }
   }
 
+  const handleQRCodeChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('QR code image must be less than 2MB')
+      return
+    }
+
+    setQrCodeFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setQrCodePreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const uploadQRCode = async () => {
+    if (!qrCodeFile) return null
+
+    try {
+      setUploadingQR(true)
+
+      const fileExt = qrCodeFile.name.split('.').pop()
+      const fileName = `qr_${Date.now()}.${fileExt}`
+      const filePath = `crypto-qr-codes/${fileName}`
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('payment-qr-codes')
+        .upload(filePath, qrCodeFile, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('payment-qr-codes')
+        .getPublicUrl(filePath)
+
+      return publicUrl
+    } catch (error) {
+      console.error('Error uploading QR code:', error)
+      throw error
+    } finally {
+      setUploadingQR(false)
+    }
+  }
+
+  const removeQRCode = () => {
+    setQrCodeFile(null)
+    setQrCodePreview(null)
+  }
+
   const handleSaveCrypto = async (e) => {
     e.preventDefault()
     setSaving(true)
 
     try {
+      let qrCodeUrl = cryptoForm.qr_code_url
+
+      // Upload new QR code if file is selected
+      if (qrCodeFile) {
+        qrCodeUrl = await uploadQRCode()
+      }
+
+      const dataToSave = {
+        ...cryptoForm,
+        qr_code_url: qrCodeUrl
+      }
+
       if (editingCrypto) {
         // Update existing
         const { error } = await supabase
           .from('crypto_addresses')
-          .update(cryptoForm)
+          .update(dataToSave)
           .eq('id', editingCrypto.id)
 
         if (error) throw error
@@ -89,7 +170,7 @@ export default function AdminSettings() {
         // Create new
         const { error } = await supabase
           .from('crypto_addresses')
-          .insert([cryptoForm])
+          .insert([dataToSave])
 
         if (error) throw error
         showSuccess('Crypto address added successfully')
@@ -99,7 +180,7 @@ export default function AdminSettings() {
       fetchData()
     } catch (error) {
       console.error('Error saving crypto address:', error)
-      alert('Failed to save crypto address')
+      alert('Failed to save crypto address: ' + error.message)
     } finally {
       setSaving(false)
     }
@@ -178,6 +259,9 @@ export default function AdminSettings() {
   const editCrypto = (crypto) => {
     setEditingCrypto(crypto)
     setCryptoForm(crypto)
+    if (crypto.qr_code_url) {
+      setQrCodePreview(crypto.qr_code_url)
+    }
     setShowCryptoForm(true)
   }
 
@@ -194,8 +278,11 @@ export default function AdminSettings() {
       address: '',
       min_amount: '',
       color: 'text-orange-500',
-      is_active: true
+      is_active: true,
+      qr_code_url: ''
     })
+    setQrCodeFile(null)
+    setQrCodePreview(null)
     setEditingCrypto(null)
     setShowCryptoForm(false)
   }
@@ -218,6 +305,11 @@ export default function AdminSettings() {
     setTimeout(() => setSuccessMessage(''), 3000)
   }
 
+  const viewQRCode = (url) => {
+    setSelectedQRImage(url)
+    setShowQRModal(true)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -233,6 +325,29 @@ export default function AdminSettings() {
         <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
           <CheckCircle className="w-5 h-5" />
           {successMessage}
+        </div>
+      )}
+
+      {/* QR Code View Modal */}
+      {showQRModal && selectedQRImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative max-w-lg w-full bg-slate-900 rounded-2xl p-6 border border-purple-800/50">
+            <button
+              onClick={() => {
+                setShowQRModal(false)
+                setSelectedQRImage(null)
+              }}
+              className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-xl font-bold mb-4">QR Code</h3>
+            <img
+              src={selectedQRImage}
+              alt="QR Code"
+              className="w-full rounded-lg border border-slate-700"
+            />
+          </div>
         </div>
       )}
 
@@ -356,6 +471,59 @@ export default function AdminSettings() {
                       <option value="text-purple-500">Purple (Other)</option>
                     </select>
                   </div>
+
+                  {/* QR Code Upload */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-2">
+                      QR Code <span className="text-xs text-slate-400">(Optional)</span>
+                    </label>
+                    
+                    {qrCodePreview ? (
+                      <div className="relative">
+                        <img
+                          src={qrCodePreview}
+                          alt="QR Code Preview"
+                          className="w-48 h-48 object-contain rounded-lg border-2 border-slate-700 bg-white p-2"
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={removeQRCode}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm flex items-center gap-1"
+                          >
+                            <X className="w-4 h-4" />
+                            Remove
+                          </button>
+                          <label className="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-sm flex items-center gap-1 cursor-pointer">
+                            <Upload className="w-4 h-4" />
+                            Change
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleQRCodeChange}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                        <ImageIcon className="w-12 h-12 text-slate-500 mb-2" />
+                        <p className="text-sm text-slate-400">Click to upload QR code</p>
+                        <p className="text-xs text-slate-500 mt-1">PNG, JPG up to 2MB</p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleQRCodeChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                    <p className="text-xs text-slate-400 mt-2">
+                      Upload a QR code image for this wallet address to make it easier for users to scan
+                    </p>
+                  </div>
+
                   <div className="md:col-span-2">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -378,13 +546,13 @@ export default function AdminSettings() {
                   </button>
                   <button
                     type="submit"
-                    disabled={saving}
+                    disabled={saving || uploadingQR}
                     className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold disabled:opacity-50 flex items-center gap-2"
                   >
-                    {saving ? (
+                    {(saving || uploadingQR) ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Saving...
+                        {uploadingQR ? 'Uploading QR...' : 'Saving...'}
                       </>
                     ) : (
                       <>
@@ -414,6 +582,15 @@ export default function AdminSettings() {
                       <p className="text-sm text-slate-400">{crypto.network}</p>
                     </div>
                     <div className="flex gap-2">
+                      {crypto.qr_code_url && (
+                        <button
+                          onClick={() => viewQRCode(crypto.qr_code_url)}
+                          className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                          title="View QR Code"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => editCrypto(crypto)}
                         className="p-2 text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
@@ -429,6 +606,17 @@ export default function AdminSettings() {
                     </div>
                   </div>
                   <div className="space-y-2">
+                    {crypto.qr_code_url && (
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">QR Code</p>
+                        <img
+                          src={crypto.qr_code_url}
+                          alt="QR Code"
+                          className="w-24 h-24 object-contain rounded border border-slate-700 bg-white p-1 cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => viewQRCode(crypto.qr_code_url)}
+                        />
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs text-slate-400">Address</p>
                       <p className="text-sm font-mono bg-slate-800 px-3 py-2 rounded border border-slate-700 overflow-x-auto">
@@ -458,7 +646,7 @@ export default function AdminSettings() {
         </div>
       )}
 
-      {/* Bank Tab */}
+      {/* Bank Tab - Keep the same as before */}
       {activeTab === 'bank' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">

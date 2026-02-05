@@ -11,6 +11,7 @@ export default function WithdrawalPage() {
   const router = useRouter()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   
   // Withdrawal form state
   const [amount, setAmount] = useState('')
@@ -26,6 +27,33 @@ export default function WithdrawalPage() {
   const [bankName, setBankName] = useState('')
   const [accountName, setAccountName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
+
+  // Load theme preference and listen for changes
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'theme') {
+        setIsDarkMode(e.newValue === 'dark')
+      }
+    }
+
+    const handleThemeChange = () => {
+      const savedTheme = localStorage.getItem('theme')
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('themeChange', handleThemeChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('themeChange', handleThemeChange)
+    }
+  }, [])
   
   const paymentMethods = [
     {
@@ -167,8 +195,16 @@ export default function WithdrawalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}>
+        <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
+          isDarkMode 
+            ? 'border-emerald-500/20 border-t-emerald-500' 
+            : 'border-indigo-200 border-t-indigo-600'
+        }`}></div>
       </div>
     )
   }
@@ -180,7 +216,11 @@ export default function WithdrawalPage() {
     <div className="p-4 lg:p-8 space-y-6">
       {/* Success Toast */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in ${
+          isDarkMode 
+            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' 
+            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+        }`}>
           <CheckCircle className="w-6 h-6" />
           <div>
             <p className="font-bold">Withdrawal Request Submitted!</p>
@@ -192,13 +232,25 @@ export default function WithdrawalPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Withdraw Funds</h1>
-          <p className="text-slate-400">Request withdrawal from your account</p>
+          <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Withdraw Funds
+          </h1>
+          <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+            Request withdrawal from your account
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl px-6 py-3 border border-slate-800/50">
-            <p className="text-xs text-slate-400 mb-1">Available Balance</p>
-            <p className="text-2xl font-bold text-emerald-400">
+          <div className={`rounded-xl px-6 py-3 border ${
+            isDarkMode 
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <p className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+              Available Balance
+            </p>
+            <p className={`text-2xl font-bold ${
+              isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+            }`}>
               {profile.currency} {availableBalance.toFixed(2)}
             </p>
           </div>
@@ -206,24 +258,42 @@ export default function WithdrawalPage() {
       </div>
 
       {/* Important Notice */}
-      <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl p-6">
+      <div className={`rounded-2xl p-6 border ${
+        isDarkMode 
+          ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30' 
+          : 'bg-amber-50 border-amber-200'
+      }`}>
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-amber-500/20 rounded-xl">
-            <AlertCircle className="w-6 h-6 text-amber-400" />
+          <div className={`p-3 rounded-xl ${
+            isDarkMode ? 'bg-amber-500/20' : 'bg-amber-100'
+          }`}>
+            <AlertCircle className={`w-6 h-6 ${
+              isDarkMode ? 'text-amber-400' : 'text-amber-600'
+            }`} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-amber-400 mb-2">Withdrawal Guidelines</h3>
-            <ul className="space-y-2 text-sm text-slate-300">
+            <h3 className={`text-lg font-bold mb-2 ${
+              isDarkMode ? 'text-amber-400' : 'text-amber-700'
+            }`}>Withdrawal Guidelines</h3>
+            <ul className={`space-y-2 text-sm ${
+              isDarkMode ? 'text-slate-300' : 'text-gray-700'
+            }`}>
               <li className="flex items-start gap-2">
-                <Clock className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                <Clock className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-amber-400' : 'text-amber-600'
+                }`} />
                 <span>Withdrawal requests are processed within 24-48 hours</span>
               </li>
               <li className="flex items-start gap-2">
-                <DollarSign className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                <DollarSign className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-amber-400' : 'text-amber-600'
+                }`} />
                 <span>Withdrawal fees apply based on payment method</span>
               </li>
               <li className="flex items-start gap-2">
-                <Shield className="w-4 h-4 mt-0.5 text-amber-400 flex-shrink-0" />
+                <Shield className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-amber-400' : 'text-amber-600'
+                }`} />
                 <span>Ensure your withdrawal details are correct to avoid delays</span>
               </li>
             </ul>
@@ -235,8 +305,14 @@ export default function WithdrawalPage() {
         {/* Left Column - Withdrawal Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Select Payment Method */}
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
-            <h3 className="text-xl font-bold mb-6">Select Withdrawal Method</h3>
+          <div className={`rounded-2xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <h3 className={`text-xl font-bold mb-6 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Select Withdrawal Method</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {paymentMethods.map((method) => (
                 <button
@@ -244,25 +320,41 @@ export default function WithdrawalPage() {
                   onClick={() => setSelectedMethod(method.id)}
                   className={`relative overflow-hidden rounded-xl p-6 border-2 transition-all text-left ${
                     selectedMethod === method.id
-                      ? 'border-emerald-500 bg-emerald-500/10'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-800/30'
+                      ? isDarkMode
+                        ? 'border-emerald-500 bg-emerald-500/10'
+                        : 'border-indigo-500 bg-indigo-50'
+                      : isDarkMode
+                        ? 'border-slate-700 hover:border-slate-600 bg-slate-800/30'
+                        : 'border-indigo-200 hover:border-indigo-300 bg-white shadow-sm'
                   }`}
                 >
                   <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${method.color} opacity-10 rounded-full blur-3xl`}></div>
                   <div className="relative z-10">
                     <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${method.color} bg-opacity-20`}>
-                        {method.icon}
+                      <div className={`p-3 rounded-xl bg-gradient-to-br ${method.color} ${
+                        isDarkMode ? 'bg-opacity-20' : 'bg-opacity-10'
+                      }`}>
+                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                          {method.icon}
+                        </span>
                       </div>
                       {selectedMethod === method.id && (
-                        <div className="p-1 bg-emerald-500 rounded-full">
-                          <CheckCircle className="w-5 h-5" />
+                        <div className={`p-1 rounded-full ${
+                          isDarkMode ? 'bg-emerald-500' : 'bg-indigo-600'
+                        }`}>
+                          <CheckCircle className="w-5 h-5 text-white" />
                         </div>
                       )}
                     </div>
-                    <h4 className="font-bold text-lg mb-1">{method.name}</h4>
-                    <p className="text-sm text-slate-400 mb-3">{method.description}</p>
-                    <div className="space-y-1 text-xs text-slate-400">
+                    <h4 className={`font-bold text-lg mb-1 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>{method.name}</h4>
+                    <p className={`text-sm mb-3 ${
+                      isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                    }`}>{method.description}</p>
+                    <div className={`space-y-1 text-xs ${
+                      isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                    }`}>
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {method.processingTime}
@@ -279,13 +371,21 @@ export default function WithdrawalPage() {
           </div>
 
           {/* Withdrawal Form */}
-          <form onSubmit={handleWithdraw} className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
-            <h3 className="text-xl font-bold mb-6">Withdrawal Details</h3>
+          <form onSubmit={handleWithdraw} className={`rounded-2xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <h3 className={`text-xl font-bold mb-6 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Withdrawal Details</h3>
             
             <div className="space-y-4">
               {/* Amount Input */}
               <div>
-                <label className="block text-sm font-medium mb-2">Amount ({profile.currency})</label>
+                <label className={`block text-sm font-medium mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Amount ({profile.currency})</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -296,14 +396,22 @@ export default function WithdrawalPage() {
                     step="0.01"
                     max={availableBalance}
                     required
-                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 pr-16"
+                    className={`w-full px-4 py-3 border rounded-lg pr-16 focus:outline-none focus:ring-2 ${
+                      isDarkMode 
+                        ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                        : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                    }`}
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">
+                  <span className={`absolute right-4 top-1/2 -translate-y-1/2 font-semibold ${
+                    isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                  }`}>
                     {profile.currency}
                   </span>
                 </div>
                 {selectedMethodData && (
-                  <p className="text-xs text-slate-400 mt-2">
+                  <p className={`text-xs mt-2 ${
+                    isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                  }`}>
                     Available: {profile.currency} {availableBalance.toFixed(2)} • 
                     Minimum: {profile.currency} {selectedMethodData.minAmount} • 
                     Fee: {selectedMethodData.fees}
@@ -313,46 +421,38 @@ export default function WithdrawalPage() {
 
               {/* Quick Amount Buttons */}
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAmount((availableBalance * 0.25).toFixed(2))}
-                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
-                >
-                  25%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAmount((availableBalance * 0.5).toFixed(2))}
-                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
-                >
-                  50%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAmount((availableBalance * 0.75).toFixed(2))}
-                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
-                >
-                  75%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAmount(availableBalance.toFixed(2))}
-                  className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Max
-                </button>
+                {[0.25, 0.5, 0.75, 1].map((percent) => (
+                  <button
+                    key={percent}
+                    type="button"
+                    onClick={() => setAmount((availableBalance * percent).toFixed(2))}
+                    className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                      isDarkMode 
+                        ? 'bg-slate-800/50 hover:bg-slate-700 border-slate-700 text-white' 
+                        : 'bg-white hover:bg-indigo-50 border-indigo-200 text-gray-900'
+                    }`}
+                  >
+                    {percent === 1 ? 'Max' : `${percent * 100}%`}
+                  </button>
+                ))}
               </div>
 
               {/* Crypto Withdrawal Details */}
               {selectedMethod === 'crypto' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Crypto Network</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>Crypto Network</label>
                     <select
                       value={cryptoNetwork}
                       onChange={(e) => setCryptoNetwork(e.target.value)}
                       required
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                          : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     >
                       <option value="">Select network</option>
                       <option value="BTC">Bitcoin (BTC)</option>
@@ -362,16 +462,24 @@ export default function WithdrawalPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Wallet Address</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>Wallet Address</label>
                     <input
                       type="text"
                       value={cryptoAddress}
                       onChange={(e) => setCryptoAddress(e.target.value)}
                       placeholder="Enter your wallet address"
                       required
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 font-mono text-sm ${
+                        isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                          : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     />
-                    <p className="text-xs text-amber-400 mt-2 flex items-start gap-1">
+                    <p className={`text-xs mt-2 flex items-start gap-1 ${
+                      isDarkMode ? 'text-amber-400' : 'text-amber-700'
+                    }`}>
                       <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                       Double-check your wallet address. Funds sent to wrong address cannot be recovered.
                     </p>
@@ -383,36 +491,54 @@ export default function WithdrawalPage() {
               {selectedMethod === 'bank' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Bank Name</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>Bank Name</label>
                     <input
                       type="text"
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
                       placeholder="Enter bank name"
                       required
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                          : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Account Name</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>Account Name</label>
                     <input
                       type="text"
                       value={accountName}
                       onChange={(e) => setAccountName(e.target.value)}
                       placeholder="Enter account holder name"
                       required
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                          : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Account Number</label>
+                    <label className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>Account Number</label>
                     <input
                       type="text"
                       value={accountNumber}
                       onChange={(e) => setAccountNumber(e.target.value)}
                       placeholder="Enter account number"
                       required
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                        isDarkMode 
+                          ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                          : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                      }`}
                     />
                   </div>
                 </>
@@ -422,7 +548,11 @@ export default function WithdrawalPage() {
               <button
                 type="submit"
                 disabled={!selectedMethod || submitting || availableBalance === 0}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-xl font-bold text-lg transition-all shadow-lg disabled:cursor-not-allowed"
+                className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-lg transition-all shadow-lg disabled:cursor-not-allowed ${
+                  isDarkMode 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 text-white' 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-300 text-white'
+                }`}
               >
                 {submitting ? (
                   <>
@@ -444,28 +574,54 @@ export default function WithdrawalPage() {
         {/* Right Column - Summary & Info */}
         <div className="space-y-6">
           {/* Withdrawal Summary */}
-          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-2xl p-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
+          <div className={`rounded-2xl p-6 border ${
+            isDarkMode 
+              ? 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/30' 
+              : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-indigo-200 shadow-sm'
+          }`}>
+            <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              <DollarSign className={`w-5 h-5 ${
+                isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+              }`} />
               Withdrawal Summary
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Method:</span>
-                <span className="font-semibold">{selectedMethodData?.name || 'Not selected'}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+                  Method:
+                </span>
+                <span className={`font-semibold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{selectedMethodData?.name || 'Not selected'}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Amount:</span>
-                <span className="font-semibold">{amount || '0'} {profile.currency}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+                  Amount:
+                </span>
+                <span className={`font-semibold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{amount || '0'} {profile.currency}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Fee:</span>
-                <span className="font-semibold">{selectedMethodData?.fees || 'N/A'}</span>
+                <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+                  Fee:
+                </span>
+                <span className={`font-semibold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>{selectedMethodData?.fees || 'N/A'}</span>
               </div>
-              <div className="pt-3 border-t border-emerald-500/30">
+              <div className={`pt-3 border-t ${
+                isDarkMode ? 'border-emerald-500/30' : 'border-indigo-200'
+              }`}>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">You'll Receive:</span>
-                  <span className="font-bold text-xl text-emerald-400">
+                  <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+                    You'll Receive:
+                  </span>
+                  <span className={`font-bold text-xl ${
+                    isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+                  }`}>
                     {amount && selectedMethodData 
                       ? (parseFloat(amount) * (1 - parseFloat(selectedMethodData.fees) / 100)).toFixed(2)
                       : '0'} {profile.currency}
@@ -476,14 +632,26 @@ export default function WithdrawalPage() {
           </div>
 
           {/* Security Badge */}
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
+          <div className={`rounded-2xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
             <div className="flex items-start gap-3">
-              <div className="p-3 bg-emerald-500/20 rounded-xl">
-                <Shield className="w-6 h-6 text-emerald-400" />
+              <div className={`p-3 rounded-xl ${
+                isDarkMode ? 'bg-emerald-500/20' : 'bg-indigo-50'
+              }`}>
+                <Shield className={`w-6 h-6 ${
+                  isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+                }`} />
               </div>
               <div>
-                <h4 className="font-bold mb-2">Secure Withdrawals</h4>
-                <p className="text-sm text-slate-400">
+                <h4 className={`font-bold mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Secure Withdrawals</h4>
+                <p className={`text-sm ${
+                  isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                }`}>
                   All withdrawal requests are manually reviewed for security.
                 </p>
               </div>
@@ -491,14 +659,26 @@ export default function WithdrawalPage() {
           </div>
 
           {/* Help Section */}
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50">
-            <h4 className="font-bold mb-3">Need Help?</h4>
-            <p className="text-sm text-slate-400 mb-4">
+          <div className={`rounded-2xl p-6 border ${
+            isDarkMode 
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <h4 className={`font-bold mb-3 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>Need Help?</h4>
+            <p className={`text-sm mb-4 ${
+              isDarkMode ? 'text-slate-400' : 'text-gray-600'
+            }`}>
               If you have any questions about withdrawals, contact our support team.
             </p>
             <button
               type="button"
-              className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-medium transition-colors"
+              className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isDarkMode 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-white' 
+                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600'
+              }`}
             >
               Contact Support
             </button>

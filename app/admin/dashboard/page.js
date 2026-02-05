@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import ActiveUsers from '@/components/ActiveUsers'
 import { 
   DollarSign, TrendingUp, Users, Activity,
-  ArrowUpRight, ArrowDownLeft, Settings, Bitcoin, Building2, RefreshCw
+  ArrowUpRight, ArrowDownLeft, Settings, Bitcoin, Building2, RefreshCw, LogOut
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -155,6 +155,11 @@ export default function AdminDashboard() {
     fetchDashboardStats()
   }
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/admin/signin')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -165,7 +170,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-4 lg:p-8 space-y-6">
-      {/* Header with Settings and Refresh Buttons */}
+      {/* Header with Settings, Refresh and Logout Buttons */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-1">Admin Dashboard</h1>
@@ -182,6 +187,16 @@ export default function AdminDashboard() {
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-semibold"
+            title="Sign out"
+          >
+            <LogOut className="w-5 h-5" />
+            Logout
+          </button> 
 
           {/* Payment Settings Button */}
           <button

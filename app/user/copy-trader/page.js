@@ -12,6 +12,7 @@ export default function CopyTraderPage() {
   const router = useRouter()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   const [traders, setTraders] = useState([])
   const [tradersLoading, setTradersLoading] = useState(true)
   const [selectedTrader, setSelectedTrader] = useState(null)
@@ -24,6 +25,33 @@ export default function CopyTraderPage() {
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Load theme preference and listen for changes
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'theme') {
+        setIsDarkMode(e.newValue === 'dark')
+      }
+    }
+
+    const handleThemeChange = () => {
+      const savedTheme = localStorage.getItem('theme')
+      setIsDarkMode(savedTheme === 'dark')
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('themeChange', handleThemeChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('themeChange', handleThemeChange)
+    }
+  }, [])
 
   useEffect(() => {
     checkUser()
@@ -148,8 +176,16 @@ export default function CopyTraderPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
+          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}>
+        <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
+          isDarkMode 
+            ? 'border-emerald-500/20 border-t-emerald-500' 
+            : 'border-indigo-200 border-t-indigo-600'
+        }`}></div>
       </div>
     )
   }
@@ -158,7 +194,11 @@ export default function CopyTraderPage() {
     <div className="p-4 lg:p-8 space-y-6">
       {/* Success Toast */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in">
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-in ${
+          isDarkMode 
+            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' 
+            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+        }`}>
           <CheckCircle className="w-6 h-6" />
           <div>
             <p className="font-bold">Trader Copied Successfully!</p>
@@ -170,16 +210,24 @@ export default function CopyTraderPage() {
       {/* Copy Modal */}
       {showCopyModal && selectedTrader && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 rounded-2xl p-6 max-w-md w-full border border-slate-800 shadow-2xl">
+          <div className={`rounded-2xl p-6 max-w-md w-full border shadow-2xl ${
+            isDarkMode 
+              ? 'bg-slate-900 border-slate-800' 
+              : 'bg-white border-indigo-200'
+          }`}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">Copy {selectedTrader.name}</h3>
+              <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                Copy {selectedTrader.name}
+              </h3>
               <button
                 onClick={() => {
                   setShowCopyModal(false)
                   setSelectedTrader(null)
                   setCopyAmount('')
                 }}
-                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                className={`p-2 rounded-lg transition-colors ${
+                  isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-indigo-50'
+                }`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -187,7 +235,9 @@ export default function CopyTraderPage() {
 
             <div className="space-y-4">
               {/* Trader Info */}
-              <div className="bg-slate-800/50 rounded-xl p-4">
+              <div className={`rounded-xl p-4 ${
+                isDarkMode ? 'bg-slate-800/50' : 'bg-indigo-50'
+              }`}>
                 <div className="flex items-center gap-3 mb-3">
                   <img
                     src={selectedTrader.avatar || `https://ui-avatars.com/api/?name=${selectedTrader.name}&background=random`}
@@ -195,25 +245,41 @@ export default function CopyTraderPage() {
                     className="w-12 h-12 rounded-full"
                   />
                   <div>
-                    <h4 className="font-bold">{selectedTrader.name}</h4>
-                    <p className="text-sm text-slate-400">ROI: {selectedTrader.roi}%</p>
+                    <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedTrader.name}
+                    </h4>
+                    <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                      ROI: {selectedTrader.roi}%
+                    </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center text-sm">
                   <div>
-                    <p className="text-slate-400 text-xs">Win Rate</p>
-                    <p className="font-semibold">{selectedTrader.win_rate}%</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                      Win Rate
+                    </p>
+                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedTrader.win_rate}%
+                    </p>
                   </div>
                   <div>
-                    <p className="text-slate-400 text-xs">Followers</p>
-                    <p className="font-semibold">{selectedTrader.followers}</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                      Followers
+                    </p>
+                    <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {selectedTrader.followers}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-slate-400 text-xs">Risk</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                      Risk
+                    </p>
                     <p className={`font-semibold capitalize ${
-                      selectedTrader.risk_level === 'low' ? 'text-emerald-400' :
-                      selectedTrader.risk_level === 'medium' ? 'text-amber-400' :
-                      'text-rose-400'
+                      selectedTrader.risk_level === 'low' 
+                        ? isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+                        : selectedTrader.risk_level === 'medium' 
+                          ? isDarkMode ? 'text-amber-400' : 'text-amber-600'
+                          : isDarkMode ? 'text-rose-400' : 'text-rose-600'
                     }`}>
                       {selectedTrader.risk_level}
                     </p>
@@ -223,7 +289,9 @@ export default function CopyTraderPage() {
 
               {/* Amount Input */}
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className={`block text-sm font-medium mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
                   Copy Amount ({profile.currency})
                 </label>
                 <div className="relative">
@@ -234,22 +302,34 @@ export default function CopyTraderPage() {
                     placeholder="Enter amount"
                     min={selectedTrader.min_copy_amount}
                     step="0.01"
-                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 ${
+                      isDarkMode 
+                        ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                        : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+                    }`}
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">
+                  <span className={`absolute right-4 top-1/2 -translate-y-1/2 font-semibold ${
+                    isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                  }`}>
                     {profile.currency}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-2">
+                <p className={`text-xs mt-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                   Min: {profile.currency} {selectedTrader.min_copy_amount} • Available: {profile.currency} {Number(profile.balance).toFixed(2)}
                 </p>
               </div>
 
               {/* Info Box */}
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <div className={`rounded-lg p-4 border ${
+                isDarkMode 
+                  ? 'bg-blue-500/10 border-blue-500/30' 
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
                 <div className="flex items-start gap-2">
-                  <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-slate-300">
+                  <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                    isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                  }`} />
+                  <div className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                     <p className="mb-2">By copying this trader:</p>
                     <ul className="space-y-1 text-xs">
                       <li>• Your trades will mirror theirs automatically</li>
@@ -268,14 +348,22 @@ export default function CopyTraderPage() {
                     setSelectedTrader(null)
                     setCopyAmount('')
                   }}
-                  className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg font-semibold transition-colors"
+                  className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors ${
+                    isDarkMode 
+                      ? 'bg-slate-800 hover:bg-slate-700' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCopyTrader}
                   disabled={submitting}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed"
+                  className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed ${
+                    isDarkMode 
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-700 disabled:to-slate-700 text-white' 
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-300 text-white'
+                  }`}
                 >
                   {submitting ? 'Processing...' : 'Start Copying'}
                 </button>
@@ -288,13 +376,25 @@ export default function CopyTraderPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Copy Trading</h1>
-          <p className="text-slate-400">Copy successful traders and earn automatically</p>
+          <h1 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Copy Trading
+          </h1>
+          <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+            Copy successful traders and earn automatically
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl px-6 py-3 border border-slate-800/50">
-            <p className="text-xs text-slate-400 mb-1">Available Balance</p>
-            <p className="text-2xl font-bold text-emerald-400">
+          <div className={`rounded-xl px-6 py-3 border ${
+            isDarkMode 
+              ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+              : 'bg-white border-indigo-200 shadow-sm'
+          }`}>
+            <p className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+              Available Balance
+            </p>
+            <p className={`text-2xl font-bold ${
+              isDarkMode ? 'text-emerald-400' : 'text-indigo-600'
+            }`}>
               {profile.currency} {Number(profile.balance).toFixed(2)}
             </p>
           </div>
@@ -302,28 +402,44 @@ export default function CopyTraderPage() {
       </div>
 
       {/* Info Banner */}
-      <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-2xl p-6">
+      <div className={`rounded-2xl p-6 border ${
+        isDarkMode 
+          ? 'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30' 
+          : 'bg-blue-50 border-blue-200'
+      }`}>
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-500/20 rounded-xl">
-            <Info className="w-6 h-6 text-blue-400" />
+          <div className={`p-3 rounded-xl ${
+            isDarkMode ? 'bg-blue-500/20' : 'bg-blue-100'
+          }`}>
+            <Info className={`w-6 h-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-blue-400 mb-2">How Copy Trading Works</h3>
-            <ul className="space-y-2 text-sm text-slate-300">
+            <h3 className={`text-lg font-bold mb-2 ${
+              isDarkMode ? 'text-blue-400' : 'text-blue-700'
+            }`}>How Copy Trading Works</h3>
+            <ul className={`space-y-2 text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
               <li className="flex items-start gap-2">
-                <Users className="w-4 h-4 mt-0.5 text-blue-400 flex-shrink-0" />
+                <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                }`} />
                 <span>Choose a trader based on their performance and risk level</span>
               </li>
               <li className="flex items-start gap-2">
-                <DollarSign className="w-4 h-4 mt-0.5 text-blue-400 flex-shrink-0" />
+                <DollarSign className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                }`} />
                 <span>Allocate funds to copy their trades automatically</span>
               </li>
               <li className="flex items-start gap-2">
-                <Activity className="w-4 h-4 mt-0.5 text-blue-400 flex-shrink-0" />
+                <Activity className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                }`} />
                 <span>Your account mirrors their trades in real-time</span>
               </li>
               <li className="flex items-start gap-2">
-                <Shield className="w-4 h-4 mt-0.5 text-blue-400 flex-shrink-0" />
+                <Shield className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                }`} />
                 <span>You maintain full control and can stop anytime</span>
               </li>
             </ul>
@@ -332,20 +448,32 @@ export default function CopyTraderPage() {
       </div>
 
       {/* Search */}
-      <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-800/50">
+      <div className={`rounded-2xl p-4 border ${
+        isDarkMode 
+          ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+          : 'bg-white border-indigo-200 shadow-sm'
+      }`}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
+            isDarkMode ? 'text-slate-400' : 'text-gray-400'
+          }`} />
           <input
             type="text"
             placeholder="Search traders by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 ${
+              isDarkMode 
+                ? 'bg-slate-800/50 border-slate-700 text-white focus:ring-emerald-500' 
+                : 'bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500'
+            }`}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                isDarkMode ? 'text-slate-400 hover:text-white' : 'text-gray-400 hover:text-gray-900'
+              }`}
             >
               <X className="w-4 h-4" />
             </button>
@@ -356,13 +484,25 @@ export default function CopyTraderPage() {
       {/* Traders Grid */}
       {tradersLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+          <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
+            isDarkMode 
+              ? 'border-emerald-500/20 border-t-emerald-500' 
+              : 'border-indigo-200 border-t-indigo-600'
+          }`}></div>
         </div>
       ) : filteredTraders.length === 0 ? (
-        <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-12 border border-slate-800/50 text-center">
-          <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold mb-2">No Traders Found</h3>
-          <p className="text-slate-400">
+        <div className={`rounded-2xl p-12 border text-center ${
+          isDarkMode 
+            ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
+            : 'bg-white border-indigo-200 shadow-sm'
+        }`}>
+          <Users className={`w-16 h-16 mx-auto mb-4 ${
+            isDarkMode ? 'text-slate-600' : 'text-indigo-300'
+          }`} />
+          <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            No Traders Found
+          </h3>
+          <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
             {searchQuery
               ? 'No traders match your search'
               : 'No traders available at the moment'}
@@ -379,6 +519,7 @@ export default function CopyTraderPage() {
                 setSelectedTrader(trader)
                 setShowCopyModal(true)
               }}
+              isDarkMode={isDarkMode}
             />
           ))}
         </div>
@@ -404,34 +545,52 @@ export default function CopyTraderPage() {
 }
 
 // Trader Card Component
-function TraderCard({ trader, currency, onCopy }) {
+function TraderCard({ trader, currency, onCopy, isDarkMode }) {
   const isPositiveROI = trader.roi >= 0
   const riskColor = {
-    low: 'text-emerald-400 bg-emerald-500/20',
-    medium: 'text-amber-400 bg-amber-500/20',
-    high: 'text-rose-400 bg-rose-500/20'
+    low: isDarkMode 
+      ? 'text-emerald-400 bg-emerald-500/20' 
+      : 'text-emerald-700 bg-emerald-50',
+    medium: isDarkMode 
+      ? 'text-amber-400 bg-amber-500/20' 
+      : 'text-amber-700 bg-amber-50',
+    high: isDarkMode 
+      ? 'text-rose-400 bg-rose-500/20' 
+      : 'text-rose-700 bg-rose-50'
   }
 
   return (
-    <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-800/50 hover:border-slate-700 transition-all group">
+    <div className={`rounded-2xl p-6 border transition-all group ${
+      isDarkMode 
+        ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50 hover:border-slate-700' 
+        : 'bg-white border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-lg'
+    }`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <img
             src={trader.avatar || `https://ui-avatars.com/api/?name=${trader.name}&background=random`}
             alt={trader.name}
-            className="w-14 h-14 rounded-full border-2 border-slate-700"
+            className={`w-14 h-14 rounded-full border-2 ${
+              isDarkMode ? 'border-slate-700' : 'border-indigo-200'
+            }`}
           />
           <div>
-            <h3 className="font-bold text-lg">{trader.name}</h3>
+            <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              {trader.name}
+            </h3>
             <div className="flex items-center gap-2 mt-1">
               {trader.verified && (
-                <span className="flex items-center gap-1 text-xs text-blue-400">
+                <span className={`flex items-center gap-1 text-xs ${
+                  isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                }`}>
                   <CheckCircle className="w-3 h-3" />
                   Verified
                 </span>
               )}
-              <span className="flex items-center gap-1 text-xs text-amber-400">
+              <span className={`flex items-center gap-1 text-xs ${
+                isDarkMode ? 'text-amber-400' : 'text-amber-600'
+              }`}>
                 <Star className="w-3 h-3 fill-current" />
                 {trader.rating || '5.0'}
               </span>
@@ -445,44 +604,80 @@ function TraderCard({ trader, currency, onCopy }) {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-          <div className={`flex items-center justify-center gap-1 mb-1 ${isPositiveROI ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <div className={`rounded-lg p-3 text-center ${
+          isDarkMode ? 'bg-slate-800/50' : 'bg-indigo-50'
+        }`}>
+          <div className={`flex items-center justify-center gap-1 mb-1 ${
+            isPositiveROI 
+              ? isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+              : isDarkMode ? 'text-rose-400' : 'text-rose-600'
+          }`}>
             {isPositiveROI ? <TrendingUp className="w-4 h-4" /> : <TrendingUp className="w-4 h-4 rotate-180" />}
             <span className="text-xs font-medium">ROI</span>
           </div>
-          <p className={`text-xl font-bold ${isPositiveROI ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <p className={`text-xl font-bold ${
+            isPositiveROI 
+              ? isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+              : isDarkMode ? 'text-rose-400' : 'text-rose-600'
+          }`}>
             {isPositiveROI ? '+' : ''}{trader.roi}%
           </p>
         </div>
-        <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-          <p className="text-xs text-slate-400 mb-1">Win Rate</p>
-          <p className="text-xl font-bold">{trader.win_rate}%</p>
+        <div className={`rounded-lg p-3 text-center ${
+          isDarkMode ? 'bg-slate-800/50' : 'bg-indigo-50'
+        }`}>
+          <p className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+            Win Rate
+          </p>
+          <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {trader.win_rate}%
+          </p>
         </div>
-        <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-          <p className="text-xs text-slate-400 mb-1">Followers</p>
-          <p className="text-xl font-bold">{trader.followers}</p>
+        <div className={`rounded-lg p-3 text-center ${
+          isDarkMode ? 'bg-slate-800/50' : 'bg-indigo-50'
+        }`}>
+          <p className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+            Followers
+          </p>
+          <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {trader.followers}
+          </p>
         </div>
       </div>
 
       {/* Additional Info */}
       <div className="space-y-2 mb-4 text-sm">
         <div className="flex items-center justify-between">
-          <span className="text-slate-400">Total Trades</span>
-          <span className="font-semibold">{trader.total_trades || 0}</span>
+          <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+            Total Trades
+          </span>
+          <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {trader.total_trades || 0}
+          </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-slate-400">Experience</span>
-          <span className="font-semibold">{trader.experience || 'N/A'}</span>
+          <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+            Experience
+          </span>
+          <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {trader.experience || 'N/A'}
+          </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-slate-400">Min Copy</span>
-          <span className="font-semibold">{currency} {trader.min_copy_amount}</span>
+          <span className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
+            Min Copy
+          </span>
+          <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {currency} {trader.min_copy_amount}
+          </span>
         </div>
       </div>
 
       {/* Description */}
       {trader.description && (
-        <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+        <p className={`text-sm mb-4 line-clamp-2 ${
+          isDarkMode ? 'text-slate-400' : 'text-gray-600'
+        }`}>
           {trader.description}
         </p>
       )}
@@ -490,7 +685,11 @@ function TraderCard({ trader, currency, onCopy }) {
       {/* Copy Button */}
       <button
         onClick={onCopy}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-xl font-semibold transition-all shadow-lg group-hover:shadow-emerald-500/20"
+        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all shadow-lg ${
+          isDarkMode 
+            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 group-hover:shadow-emerald-500/20 text-white' 
+            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl'
+        }`}
       >
         <Copy className="w-5 h-5" />
         Copy Trader
