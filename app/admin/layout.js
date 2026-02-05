@@ -10,6 +10,8 @@ export default function AdminLayout({ children }) {
   const router = useRouter()
   const [checking, setChecking] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [user, setUser] = useState(null)
+
   
   // Don't show chat on signin page
   const showChat = pathname !== '/admin/signin'
@@ -25,11 +27,14 @@ export default function AdminLayout({ children }) {
 
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        
+
         if (!user) {
           router.push('/admin/signin')
           return
         }
+
+        setUser(user)
+
 
         const { data: profile } = await supabase
           .from('profiles')
