@@ -268,24 +268,32 @@ export default function LandingPage() {
   }, [])
 
   // Sync with Google Translate cookie
+  // Replace your existing "Sync with Google Translate cookie" useEffect with this:
   useEffect(() => {
     const checkGoogleTranslateCookie = () => {
-      const cookies = document.cookie.split(';')
-      const googTransCookie = cookies.find(cookie => cookie.trim().startsWith('googtrans='))
+      // Don't check if we just set to 'en'
+      const savedLang = localStorage.getItem('selectedLanguage');
+      if (savedLang === 'en') return;
+      
+      const cookies = document.cookie.split(';');
+      const googTransCookie = cookies.find(cookie => cookie.trim().startsWith('googtrans='));
       
       if (googTransCookie) {
-        const value = googTransCookie.split('=')[1]
-        const targetLang = value.split('/')[2]
+        const value = googTransCookie.split('=')[1];
+        const parts = value.split('/');
+        const targetLang = parts[2];
         
-        if (targetLang && targetLang !== selectedLanguage) {
-          setSelectedLanguage(targetLang)
-          localStorage.setItem('selectedLanguage', targetLang)
+        // Only update if it's actually different and not 'en'
+        if (targetLang && targetLang !== 'en' && targetLang !== selectedLanguage) {
+          setSelectedLanguage(targetLang);
+          localStorage.setItem('selectedLanguage', targetLang);
         }
       }
-    }
+    };
     
-    setTimeout(checkGoogleTranslateCookie, 500)
-  }, [])
+    const timer = setTimeout(checkGoogleTranslateCookie, 500);
+    return () => clearTimeout(timer);
+  }, [selectedLanguage]); // Add dependency
 
   useEffect(() => {
     // Load Google Translate script
@@ -350,43 +358,46 @@ export default function LandingPage() {
     localStorage.setItem('selectedLanguage', langCode);
     
     if (langCode === 'en') {
-      // FIRST: Update localStorage to 'en' immediately
-      localStorage.setItem('selectedLanguage', 'en');
+      // Clear ALL Google Translate state BEFORE reload
+      const domain = window.location.hostname;
+      const domains = [
+        '',
+        `domain=${domain}`,
+        `domain=.${domain}`,
+        `domain=${domain.replace('www.', '')}`,
+        `domain=.${domain.replace('www.', '')}`
+      ];
       
-      // Reset Google Translate dropdown
-      const translateElement = document.querySelector('.goog-te-combo');
-      if (translateElement) {
-        translateElement.value = '';
-        translateElement.dispatchEvent(new Event('change'));
-      }
+      // Delete cookies for all possible domain variations
+      domains.forEach(domainStr => {
+        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; ${domainStr}`;
+        document.cookie = `googtrans=/en/en; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; ${domainStr}`;
+      });
       
-      // Remove ALL Google Translate cookies (try multiple domains)
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname;
-      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname;
-      
-      // Clear any other Google Translate storage
+      // Clear session storage
       sessionStorage.removeItem('googtrans');
       
-      // Reload the page to reset
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // Force immediate reload without delay
+      window.location.href = window.location.pathname + '?lang=en&t=' + Date.now();
     } else {
-      // Trigger Google Translate for other languages
-      // Increase timeout and add retry logic
+      // For other languages, ensure cookie is cleared first
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      
+      // Set the target language cookie explicitly
+      document.cookie = `googtrans=/en/${langCode}; path=/;`;
+      
+      // Trigger translation with retry logic
       const triggerTranslation = (attempts = 0) => {
         const selectElement = document.querySelector('.goog-te-combo');
         if (selectElement) {
           selectElement.value = langCode;
           selectElement.dispatchEvent(new Event('change'));
-        } else if (attempts < 10) {
-          // Retry if element not found (max 10 attempts = 5 seconds)
-          setTimeout(() => triggerTranslation(attempts + 1), 500);
+        } else if (attempts < 20) {
+          setTimeout(() => triggerTranslation(attempts + 1), 300);
         }
       };
       
-      setTimeout(() => triggerTranslation(), 1000);
+      setTimeout(() => triggerTranslation(), 500);
     }
   };
 
