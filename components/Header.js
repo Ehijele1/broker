@@ -132,7 +132,7 @@ export default function Header({ isDarkMode = true }) {
             <span className={`text-xl font-bold ${
               isDarkMode ? 'text-white' : 'text-gray-900'
             }`}>
-              SecureTrading
+              SecureProTrading
             </span>
           </Link>
 
