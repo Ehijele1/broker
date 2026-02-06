@@ -67,26 +67,40 @@ export default function Login() {
     // Minimal styles - only hide the hidden element, allow banner to show
     const style = document.createElement('style');
     style.innerHTML = `
-      /* Only hide our hidden translate element */
+      /* Hide our hidden translate element */
       #google_translate_element_hidden {
         display: none !important;
       }
       
-      /* Style the Google Translate banner to look better */
+      /* HIDE the Google Translate banner completely */
       .goog-te-banner-frame.skiptranslate {
-        background: ${isDarkMode ? '#1e293b' : '#ffffff'} !important;
-        border-bottom: 1px solid ${isDarkMode ? '#334155' : '#e5e7eb'} !important;
+        display: none !important;
       }
       
-      /* Adjust header when Google Translate bar appears */
-      body[style*="top"] header,
-      body[style*="top"] > div > header {
-        top: 40px !important;
+      /* Remove the top margin that Google Translate adds to body */
+      body {
+        top: 0 !important;
       }
       
-      /* Adjust fixed elements when translate bar is present */
-      body[style*="top"] .fixed {
-        transition: top 0.3s ease !important;
+      /* Hide the Google Translate toolbar */
+      .skiptranslate {
+        display: none !important;
+      }
+      
+      /* Hide the "Show original" button/tooltip */
+      #goog-gt-tt, .goog-te-balloon-frame {
+        display: none !important;
+      }
+      
+      /* Additional: Hide any Google Translate gadget */
+      .goog-te-gadget {
+        display: none !important;
+      }
+      
+      /* Ensure body doesn't get pushed down */
+      body.translated-ltr {
+        top: 0 !important;
+        margin-top: 0 !important;
       }
     `;
     document.head.appendChild(style);

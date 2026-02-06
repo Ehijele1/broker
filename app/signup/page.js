@@ -60,26 +60,40 @@ export default function SignUp() {
     // Minimal styles - only hide the hidden element, allow banner to show
     const style = document.createElement('style');
     style.innerHTML = `
-      /* Only hide our hidden translate element */
+      /* Hide our hidden translate element */
       #google_translate_element_hidden {
         display: none !important;
       }
       
-      /* Style the Google Translate banner to look better */
+      /* HIDE the Google Translate banner completely */
       .goog-te-banner-frame.skiptranslate {
-        background: ${isDarkMode ? '#1e293b' : '#ffffff'} !important;
-        border-bottom: 1px solid ${isDarkMode ? '#334155' : '#e5e7eb'} !important;
+        display: none !important;
       }
       
-      /* Adjust header when Google Translate bar appears */
-      body[style*="top"] header,
-      body[style*="top"] > div > header {
-        top: 40px !important;
+      /* Remove the top margin that Google Translate adds to body */
+      body {
+        top: 0 !important;
       }
       
-      /* Adjust fixed elements when translate bar is present */
-      body[style*="top"] .fixed {
-        transition: top 0.3s ease !important;
+      /* Hide the Google Translate toolbar */
+      .skiptranslate {
+        display: none !important;
+      }
+      
+      /* Hide the "Show original" button/tooltip */
+      #goog-gt-tt, .goog-te-balloon-frame {
+        display: none !important;
+      }
+      
+      /* Additional: Hide any Google Translate gadget */
+      .goog-te-gadget {
+        display: none !important;
+      }
+      
+      /* Ensure body doesn't get pushed down */
+      body.translated-ltr {
+        top: 0 !important;
+        margin-top: 0 !important;
       }
     `;
     document.head.appendChild(style);
@@ -222,8 +236,32 @@ export default function SignUp() {
   // Add this before your return statement
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+      <div className={`min-h-screen flex items-center justify-center ${
+        isDarkMode ? 'bg-slate-950' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}>
+        <div className="flex justify-center">
+          <div className="relative">
+            {/* Logo - MUCH BIGGER */}
+            <div className={`w-48 h-48 rounded-2xl flex items-center justify-center shadow-2xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                : 'bg-gradient-to-br from-blue-600 to-indigo-600'
+            }`}>
+              <svg className="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            
+            {/* Spinning circle around logo - MUCH BIGGER */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-60 h-60 border-8 rounded-full animate-spin ${
+                isDarkMode
+                  ? 'border-emerald-500/20 border-t-emerald-500'
+                : 'border-indigo-200 border-t-indigo-600'
+              }`}></div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

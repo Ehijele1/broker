@@ -19,14 +19,44 @@ export default function UserLayout({ children }) {
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState('en')
-  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  // Load theme preference
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('selectedLanguage')
+    if (savedLanguage) {
+      setSelectedLanguage(savedLanguage)
+    }
+  }, [])
+
+  // Add this useEffect after the one from Step 2
+useEffect(() => {
+  // Read Google Translate cookie to sync selector
+  const checkGoogleTranslateCookie = () => {
+    const cookies = document.cookie.split(';')
+    const googTransCookie = cookies.find(cookie => cookie.trim().startsWith('googtrans='))
+    
+    if (googTransCookie) {
+      const value = googTransCookie.split('=')[1]
+      // Cookie format is /en/es (from/to languages)
+      const targetLang = value.split('/')[2]
+      
+      if (targetLang && targetLang !== selectedLanguage) {
+        setSelectedLanguage(targetLang)
+        localStorage.setItem('selectedLanguage', targetLang)
+      }
+    }
+  }
+  
+  // Check on mount and after a short delay (Google Translate needs time to set cookie)
+  setTimeout(checkGoogleTranslateCookie, 500)
+}, [])
+
+  // Load theme preference and mount check
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme')
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark')
-    }
+    setIsDarkMode(savedTheme === 'dark')
+    setMounted(true)
   }, [])
 
   // Toggle theme function
@@ -34,8 +64,6 @@ export default function UserLayout({ children }) {
     const newTheme = !isDarkMode
     setIsDarkMode(newTheme)
     localStorage.setItem('theme', newTheme ? 'dark' : 'light')
-    
-    // Dispatch custom event for other components to listen
     window.dispatchEvent(new Event('themeChange'))
   }
 
@@ -48,22 +76,40 @@ export default function UserLayout({ children }) {
     // Add styles to adjust layout when Google Translate bar appears
     const style = document.createElement('style');
     style.innerHTML = `
-      /* Adjust sidebar when Google Translate bar appears */
-      body[style*="top"] aside {
-        top: 40px !important;
-        height: calc(100vh - 40px) !important;
-        transition: top 0.3s ease, height 0.3s ease !important;
-      }
-      
-      /* Adjust main content area when translate bar appears */
-      body[style*="top"] main {
-        padding-top: 40px !important;
-        transition: padding-top 0.3s ease !important;
-      }
-      
-      /* Hide the default Google Translate element */
+      /* Hide our hidden translate element */
       #google_translate_element_hidden {
         display: none !important;
+      }
+      
+      /* HIDE the Google Translate banner completely */
+      .goog-te-banner-frame.skiptranslate {
+        display: none !important;
+      }
+      
+      /* Remove the top margin that Google Translate adds to body */
+      body {
+        top: 0 !important;
+      }
+      
+      /* Hide the Google Translate toolbar */
+      .skiptranslate {
+        display: none !important;
+      }
+      
+      /* Hide the "Show original" button/tooltip */
+      #goog-gt-tt, .goog-te-balloon-frame {
+        display: none !important;
+      }
+      
+      /* Additional: Hide any Google Translate gadget */
+      .goog-te-gadget {
+        display: none !important;
+      }
+      
+      /* Ensure body doesn't get pushed down */
+      body.translated-ltr {
+        top: 0 !important;
+        margin-top: 0 !important;
       }
     `;
     document.head.appendChild(style);
@@ -102,7 +148,8 @@ export default function UserLayout({ children }) {
 
   const changeLanguage = (langCode) => {
     setSelectedLanguage(langCode);
-    
+    localStorage.setItem('selectedLanguage', langCode); // ADD THIS LINE
+
     if (langCode === 'en') {
       // Reset to original language
       const iframe = document.querySelector('.goog-te-menu-frame');
@@ -140,37 +187,37 @@ export default function UserLayout({ children }) {
   }
 
   const languages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-    { code: 'fr', name: 'French', flag: '🇫🇷' },
-    { code: 'de', name: 'German', flag: '🇩🇪' },
-    { code: 'it', name: 'Italian', flag: '🇮🇹' },
-    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
-    { code: 'ru', name: 'Russian', flag: '🇷🇺' },
-    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
-    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-    { code: 'zh-CN', name: 'Chinese (S)', flag: '🇨🇳' },
-    { code: 'zh-TW', name: 'Chinese (T)', flag: '🇹🇼' },
-    { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
-    { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
-    { code: 'bn', name: 'Bengali', flag: '🇧🇩' },
-    { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
-    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
-    { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
-    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
-    { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
-    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
-    { code: 'pl', name: 'Polish', flag: '🇵🇱' },
-    { code: 'uk', name: 'Ukrainian', flag: '🇺🇦' },
-    { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
-    { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
-    { code: 'el', name: 'Greek', flag: '🇬🇷' },
-    { code: 'cs', name: 'Czech', flag: '🇨🇿' },
-    { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
-    { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
-    { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
-    { code: 'da', name: 'Danish', flag: '🇩🇰' },
-    { code: 'no', name: 'Norwegian', flag: '🇳🇴' }
+    { code: 'en', name: 'English', flag: '🇬🇧', code3: 'ENG' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸', code3: 'ESP' },
+    { code: 'fr', name: 'French', flag: '🇫🇷', code3: 'FRA' },
+    { code: 'de', name: 'German', flag: '🇩🇪', code3: 'DEU' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹', code3: 'ITA' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹', code3: 'POR' },
+    { code: 'ru', name: 'Russian', flag: '🇷🇺', code3: 'RUS' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵', code3: 'JPN' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷', code3: 'KOR' },
+    { code: 'zh-CN', name: 'Chinese (S)', flag: '🇨🇳', code3: 'ZHS' },
+    { code: 'zh-TW', name: 'Chinese (T)', flag: '🇹🇼', code3: 'ZHT' },
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦', code3: 'ARA' },
+    { code: 'hi', name: 'Hindi', flag: '🇮🇳', code3: 'HIN' },
+    { code: 'bn', name: 'Bengali', flag: '🇧🇩', code3: 'BEN' },
+    { code: 'pa', name: 'Punjabi', flag: '🇮🇳', code3: 'PAN' },
+    { code: 'te', name: 'Telugu', flag: '🇮🇳', code3: 'TEL' },
+    { code: 'mr', name: 'Marathi', flag: '🇮🇳', code3: 'MAR' },
+    { code: 'ta', name: 'Tamil', flag: '🇮🇳', code3: 'TAM' },
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷', code3: 'TUR' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳', code3: 'VIE' },
+    { code: 'pl', name: 'Polish', flag: '🇵🇱', code3: 'POL' },
+    { code: 'uk', name: 'Ukrainian', flag: '🇺🇦', code3: 'UKR' },
+    { code: 'ro', name: 'Romanian', flag: '🇷🇴', code3: 'RON' },
+    { code: 'nl', name: 'Dutch', flag: '🇳🇱', code3: 'NLD' },
+    { code: 'el', name: 'Greek', flag: '🇬🇷', code3: 'ELL' },
+    { code: 'cs', name: 'Czech', flag: '🇨🇿', code3: 'CES' },
+    { code: 'sv', name: 'Swedish', flag: '🇸🇪', code3: 'SWE' },
+    { code: 'hu', name: 'Hungarian', flag: '🇭🇺', code3: 'HUN' },
+    { code: 'fi', name: 'Finnish', flag: '🇫🇮', code3: 'FIN' },
+    { code: 'da', name: 'Danish', flag: '🇩🇰', code3: 'DAN' },
+    { code: 'no', name: 'Norwegian', flag: '🇳🇴', code3: 'NOR' }
   ]
 
   const checkUser = async () => {
@@ -251,6 +298,10 @@ export default function UserLayout({ children }) {
     router.push('/signin')
   }
 
+  if (!mounted) {
+    return null
+  }
+
   if (loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${
@@ -258,39 +309,68 @@ export default function UserLayout({ children }) {
           ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
           : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
       }`}>
-        <div className="relative">
-          <div className={`w-20 h-20 border-4 rounded-full animate-spin ${
-            isDarkMode 
-              ? 'border-emerald-500/20 border-t-emerald-500' 
-              : 'border-indigo-200 border-t-indigo-600'
-          }`}></div>
-          <div className={`absolute inset-0 w-20 h-20 border-4 rounded-full animate-spin ${
-            isDarkMode 
-              ? 'border-amber-500/20 border-t-amber-500' 
-              : 'border-blue-200 border-t-blue-600'
-          }`} style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        <div className="flex justify-center">
+          <div className="relative">
+            {/* Logo */}
+            <div className={`w-48 h-48 rounded-2xl flex items-center justify-center shadow-2xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                : 'bg-gradient-to-br from-blue-600 to-indigo-600'
+            }`}>
+              <svg className="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            
+            {/* Spinning circle around logo */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-60 h-60 border-8 rounded-full animate-spin ${
+                isDarkMode
+                  ? 'border-emerald-500/20 border-t-emerald-500'
+                  : 'border-indigo-200 border-t-indigo-600'
+              }`}></div>
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
-  if (!loading && !user) {
+  if (!user) {
     router.push('/signin')
     return null
   }
   
-  if (loading || !profile) {
+  if (!profile) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${
         isDarkMode 
           ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
           : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
       }`}>
-        <div className={`w-16 h-16 border-4 rounded-full animate-spin ${
-          isDarkMode 
-            ? 'border-emerald-500/30 border-t-emerald-500' 
-            : 'border-indigo-300 border-t-indigo-600'
-        }`}></div>
+        <div className="flex justify-center">
+          <div className="relative">
+            {/* Logo */}
+            <div className={`w-48 h-48 rounded-2xl flex items-center justify-center shadow-2xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                : 'bg-gradient-to-br from-blue-600 to-indigo-600'
+            }`}>
+              <svg className="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            
+            {/* Spinning circle around logo */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-60 h-60 border-8 rounded-full animate-spin ${
+                isDarkMode
+                  ? 'border-emerald-500/20 border-t-emerald-500'
+                  : 'border-indigo-200 border-t-indigo-600'
+              }`}></div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -440,14 +520,14 @@ export default function UserLayout({ children }) {
                   <select
                     value={selectedLanguage}
                     onChange={(e) => changeLanguage(e.target.value)}
-                    className={`bg-transparent text-lg cursor-pointer focus:outline-none ${
+                    className={`bg-transparent text-sm cursor-pointer focus:outline-none font-medium ${
                       isDarkMode ? 'text-white' : 'text-gray-900'
                     }`}
-                    style={{ minWidth: '50px' }}
+                    style={{ minWidth: '80px' }}
                   >
                     {languages.map((lang) => (
                       <option key={lang.code} value={lang.code} className={isDarkMode ? 'bg-slate-800' : 'bg-white'}>
-                        {lang.flag}
+                        {lang.flag} {lang.code3}
                       </option>
                     ))}
                   </select>

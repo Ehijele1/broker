@@ -246,14 +246,45 @@ export default function LandingPage() {
   const [isDarkMode, setIsDarkMode] = useState(true)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [selectedLanguage, setSelectedLanguage] = useState('en')
+  const [mounted, setMounted] = useState(false)
 
+  // Load theme preference on mount - BEFORE anything else
   useEffect(() => {
     const saved = localStorage.getItem('theme')
-    if(saved) setIsDarkMode(saved === 'dark')
+    setIsDarkMode(saved === 'dark')
+    setMounted(true)
   }, [])
 
   useEffect(() => {
     checkAuthentication()
+  }, [])
+
+  useEffect(() => {
+    // Load saved language
+    const savedLanguage = localStorage.getItem('selectedLanguage')
+    if (savedLanguage) {
+      setSelectedLanguage(savedLanguage)
+    }
+  }, [])
+
+  // Sync with Google Translate cookie
+  useEffect(() => {
+    const checkGoogleTranslateCookie = () => {
+      const cookies = document.cookie.split(';')
+      const googTransCookie = cookies.find(cookie => cookie.trim().startsWith('googtrans='))
+      
+      if (googTransCookie) {
+        const value = googTransCookie.split('=')[1]
+        const targetLang = value.split('/')[2]
+        
+        if (targetLang && targetLang !== selectedLanguage) {
+          setSelectedLanguage(targetLang)
+          localStorage.setItem('selectedLanguage', targetLang)
+        }
+      }
+    }
+    
+    setTimeout(checkGoogleTranslateCookie, 500)
   }, [])
 
   useEffect(() => {
@@ -277,7 +308,7 @@ export default function LandingPage() {
 
     setTimeout(addScript, 100);
 
-    // Enhanced styles to fix header overlap
+    // Enhanced styles to HIDE Google Translate bar
     const style = document.createElement('style');
     style.innerHTML = `
       /* Only hide our hidden translate element */
@@ -285,77 +316,38 @@ export default function LandingPage() {
         display: none !important;
       }
       
-      /* Style the Google Translate banner to look better */
+      /* HIDE the Google Translate banner completely */
       .goog-te-banner-frame.skiptranslate {
-        background: ${isDarkMode ? '#1e293b' : '#ffffff'} !important;
-        border-bottom: 1px solid ${isDarkMode ? '#334155' : '#e5e7eb'} !important;
+        display: none !important;
       }
       
-      /* Adjust header when Google Translate bar appears */
-      body[style*="top"] header,
-      body[style*="top"] > div > header {
-        top: 40px !important;
+      /* Remove the top margin that Google Translate adds to body */
+      body {
+        top: 0 !important;
       }
       
-      /* Adjust fixed elements when translate bar is present */
-      body[style*="top"] .fixed {
-        transition: top 0.3s ease !important;
+      /* Hide the Google Translate toolbar */
+      .skiptranslate {
+        display: none !important;
       }
       
-      /* Add extra padding to hero section when translate bar is active */
-      body[style*="top"] .hero-section {
-        padding-top: 9rem !important;
-        transition: padding-top 0.3s ease !important;
+      /* Optional: Hide the "Show original" button that appears */
+      #goog-gt-tt, .goog-te-balloon-frame {
+        display: none !important;
       }
     `;
     document.head.appendChild(style);
 
-    // Monitor body.style.top changes to adjust fixed elements
-    const adjustFixedElements = () => {
-      const bodyTop = window.getComputedStyle(document.body).top;
-      const topValue = parseInt(bodyTop) || 0;
-      
-      if (topValue > 0) {
-        // Google Translate bar is active
-        // Find all fixed elements and adjust their top position
-        const fixedElements = document.querySelectorAll('.fixed');
-        fixedElements.forEach(el => {
-          const currentTop = parseInt(window.getComputedStyle(el).top) || 0;
-          if (currentTop < 100) { // Only adjust elements near the top
-            el.style.top = `${currentTop + topValue}px`;
-          }
-        });
-      }
-    };
-
-    // Watch for body style changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-          adjustFixedElements();
-        }
-      });
-    });
-
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['style']
-    });
-
-    // Also run on interval as backup
-    const intervalId = setInterval(adjustFixedElements, 500);
-
     return () => {
-      clearInterval(intervalId);
       const scripts = document.querySelectorAll('script[src*="translate.google.com"]');
       scripts.forEach(script => script.remove());
       style.remove();
-      observer.disconnect();
     };
   }, [isDarkMode]);
 
   const changeLanguage = (langCode) => {
     setSelectedLanguage(langCode);
+    localStorage.setItem('selectedLanguage', langCode);
     
     if (langCode === 'en') {
       // Reset to original language
@@ -386,38 +378,38 @@ export default function LandingPage() {
   };
 
   const languages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-    { code: 'fr', name: 'French', flag: '🇫🇷' },
-    { code: 'de', name: 'German', flag: '🇩🇪' },
-    { code: 'it', name: 'Italian', flag: '🇮🇹' },
-    { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
-    { code: 'ru', name: 'Russian', flag: '🇷🇺' },
-    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
-    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
-    { code: 'zh-CN', name: 'Chinese (S)', flag: '🇨🇳' },
-    { code: 'zh-TW', name: 'Chinese (T)', flag: '🇹🇼' },
-    { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
-    { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
-    { code: 'bn', name: 'Bengali', flag: '🇧🇩' },
-    { code: 'pa', name: 'Punjabi', flag: '🇮🇳' },
-    { code: 'te', name: 'Telugu', flag: '🇮🇳' },
-    { code: 'mr', name: 'Marathi', flag: '🇮🇳' },
-    { code: 'ta', name: 'Tamil', flag: '🇮🇳' },
-    { code: 'tr', name: 'Turkish', flag: '🇹🇷' },
-    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' },
-    { code: 'pl', name: 'Polish', flag: '🇵🇱' },
-    { code: 'uk', name: 'Ukrainian', flag: '🇺🇦' },
-    { code: 'ro', name: 'Romanian', flag: '🇷🇴' },
-    { code: 'nl', name: 'Dutch', flag: '🇳🇱' },
-    { code: 'el', name: 'Greek', flag: '🇬🇷' },
-    { code: 'cs', name: 'Czech', flag: '🇨🇿' },
-    { code: 'sv', name: 'Swedish', flag: '🇸🇪' },
-    { code: 'hu', name: 'Hungarian', flag: '🇭🇺' },
-    { code: 'fi', name: 'Finnish', flag: '🇫🇮' },
-    { code: 'da', name: 'Danish', flag: '🇩🇰' },
-    { code: 'no', name: 'Norwegian', flag: '🇳🇴' }
-  ];
+    { code: 'en', name: 'English', flag: '🇬🇧', code3: 'ENG' },
+    { code: 'es', name: 'Spanish', flag: '🇪🇸', code3: 'ESP' },
+    { code: 'fr', name: 'French', flag: '🇫🇷', code3: 'FRA' },
+    { code: 'de', name: 'German', flag: '🇩🇪', code3: 'DEU' },
+    { code: 'it', name: 'Italian', flag: '🇮🇹', code3: 'ITA' },
+    { code: 'pt', name: 'Portuguese', flag: '🇵🇹', code3: 'POR' },
+    { code: 'ru', name: 'Russian', flag: '🇷🇺', code3: 'RUS' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵', code3: 'JPN' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷', code3: 'KOR' },
+    { code: 'zh-CN', name: 'Chinese (S)', flag: '🇨🇳', code3: 'ZHS' },
+    { code: 'zh-TW', name: 'Chinese (T)', flag: '🇹🇼', code3: 'ZHT' },
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦', code3: 'ARA' },
+    { code: 'hi', name: 'Hindi', flag: '🇮🇳', code3: 'HIN' },
+    { code: 'bn', name: 'Bengali', flag: '🇧🇩', code3: 'BEN' },
+    { code: 'pa', name: 'Punjabi', flag: '🇮🇳', code3: 'PAN' },
+    { code: 'te', name: 'Telugu', flag: '🇮🇳', code3: 'TEL' },
+    { code: 'mr', name: 'Marathi', flag: '🇮🇳', code3: 'MAR' },
+    { code: 'ta', name: 'Tamil', flag: '🇮🇳', code3: 'TAM' },
+    { code: 'tr', name: 'Turkish', flag: '🇹🇷', code3: 'TUR' },
+    { code: 'vi', name: 'Vietnamese', flag: '🇻🇳', code3: 'VIE' },
+    { code: 'pl', name: 'Polish', flag: '🇵🇱', code3: 'POL' },
+    { code: 'uk', name: 'Ukrainian', flag: '🇺🇦', code3: 'UKR' },
+    { code: 'ro', name: 'Romanian', flag: '🇷🇴', code3: 'RON' },
+    { code: 'nl', name: 'Dutch', flag: '🇳🇱', code3: 'NLD' },
+    { code: 'el', name: 'Greek', flag: '🇬🇷', code3: 'ELL' },
+    { code: 'cs', name: 'Czech', flag: '🇨🇿', code3: 'CES' },
+    { code: 'sv', name: 'Swedish', flag: '🇸🇪', code3: 'SWE' },
+    { code: 'hu', name: 'Hungarian', flag: '🇭🇺', code3: 'HUN' },
+    { code: 'fi', name: 'Finnish', flag: '🇫🇮', code3: 'FIN' },
+    { code: 'da', name: 'Danish', flag: '🇩🇰', code3: 'DAN' },
+    { code: 'no', name: 'Norwegian', flag: '🇳🇴', code3: 'NOR' }
+  ]
 
   const checkAuthentication = async () => {
     try {
@@ -452,18 +444,37 @@ export default function LandingPage() {
     localStorage.setItem('theme', val ? 'dark' : 'light')
   }
 
+  if (!mounted) {
+    return null
+  }
+
   if (checkingAuth) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${
         isDarkMode ? 'bg-slate-950' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
       }`}>
-        <div className="text-center">
-          <div className={`w-16 h-16 border-4 rounded-full animate-spin mx-auto mb-4 ${
-            isDarkMode 
-              ? 'border-emerald-500/20 border-t-emerald-500' 
-              : 'border-indigo-200 border-t-indigo-600'
-          }`}></div>
-          <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>Loading...</p>
+        <div className="flex justify-center">
+          <div className="relative">
+            {/* Logo - MUCH BIGGER */}
+            <div className={`w-48 h-48 rounded-2xl flex items-center justify-center shadow-2xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                : 'bg-gradient-to-br from-blue-600 to-indigo-600'
+            }`}>
+              <svg className="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            
+            {/* Spinning circle around logo - MUCH BIGGER */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-60 h-60 border-8 rounded-full animate-spin ${
+                isDarkMode
+                  ? 'border-emerald-500/20 border-t-emerald-500'
+                : 'border-indigo-200 border-t-indigo-600'
+              }`}></div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -493,16 +504,14 @@ export default function LandingPage() {
           <select
             value={selectedLanguage}
             onChange={(e) => changeLanguage(e.target.value)}
-            className={`px-3 py-1 rounded-lg border outline-none cursor-pointer transition-colors text-xl ${
-              isDarkMode
-                ? 'bg-slate-900 border-slate-600 text-white hover:border-emerald-500 focus:border-emerald-500'
-                : 'bg-white border-gray-300 text-gray-900 hover:border-indigo-500 focus:border-indigo-500'
+            className={`bg-transparent text-sm cursor-pointer focus:outline-none font-medium ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
             }`}
-            style={{ minWidth: '60px' }}
+            style={{ minWidth: '80px' }}
           >
             {languages.map((lang) => (
-              <option key={lang.code} value={lang.code}>
-                {lang.flag}
+              <option key={lang.code} value={lang.code} className={isDarkMode ? 'bg-slate-800' : 'bg-white'}>
+                {lang.flag} {lang.code3}
               </option>
             ))}
           </select>
