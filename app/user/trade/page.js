@@ -549,13 +549,13 @@ export default function TradePage() {
       {/* Top Bar */}
       <header className="sticky top-0 z-30 bg-black text-white border-b border-gray-800">
         <div className="px-4 py-3">
-          {/* Top ticker - UPDATED WITH NVIDIA AND GOLD (REAL PRICES) */}
+          {/* Top ticker - UPDATED WITH NVIDIA AND GOLD (REAL PRICES) 
           <div className="flex items-center gap-6 text-sm overflow-x-auto mb-3 pb-2">
             <TickerItem label="S&P 500" value="25,116.3" change="-127.90" percent="-0.51%" positive={false} />
             <TickerItem label="NVDA" value="188.50" change="+1.58" percent="+0.85%" positive={true} />
             <TickerItem label="Gold" value="4,667.50" change="+73.25" percent="+1.60%" positive={true} />
             <TickerItem label="Bitcoin" value="91,126" change="-1,434" percent="-1.55%" positive={false} />
-          </div>
+          </div>*/}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
