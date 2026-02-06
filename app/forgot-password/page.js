@@ -229,7 +229,7 @@ export default function ForgotPassword() {
                   : 'text-blue-600 hover:text-blue-700'
               }`}
             >
-              support@securetrading.com
+              support@secureprotrading.com
             </a>
           </div>
         </div>

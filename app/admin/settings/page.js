@@ -685,7 +685,7 @@ export default function AdminSettings() {
                       type="text"
                       value={bankForm.account_name}
                       onChange={(e) => setBankForm({...bankForm, account_name: e.target.value})}
-                      placeholder="e.g., SecureTrading LLC"
+                      placeholder="e.g., SecureProTrading LLC"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />

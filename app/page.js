@@ -920,7 +920,7 @@ export default function LandingPage() {
           >
             <h2 className="text-4xl font-extrabold mb-4">Why Choose Us?</h2>
             <p className={isDarkMode ? 'text-slate-400' : 'text-gray-600'}>
-              Here are a few reasons why you should choose SecureTrading
+              Here are a few reasons why you should choose SecureProTrading
             </p>
           </motion.div>
 
@@ -992,7 +992,7 @@ export default function LandingPage() {
           <div className="space-y-4">
             {[
               { question: "What is Copy Trading?", answer: "As the name implies, it is 'Copying Trades' from an experienced trader. You simply select a trader and copy whatever trades they place." },
-              { question: "How do I make a deposit?", answer: "To deposit funds in your SecureTrading account, you may choose any of the available methods of payment in your country. Log in to your account, click on 'Deposit', enter the amount you wish to deposit, select the method of payment from the dropdown menu, and copy wallet address if crypto deposit is selected." },
+              { question: "How do I make a deposit?", answer: "To deposit funds in your SecureProTrading account, you may choose any of the available methods of payment in your country. Log in to your account, click on 'Deposit', enter the amount you wish to deposit, select the method of payment from the dropdown menu, and copy wallet address if crypto deposit is selected." },
               { question: "What is Copy Stop Loss?", answer: "Copy Stop Loss (CSL) is an instruction to close a copy if the value of the entire copy drops below a specific dollar amount or ratio. You can use this to protect your investment - to automatically sell the copy investment if its value goes down. CSL is mandatory on every copy. You can set the CSL anywhere between 5% and 95%." },
               { question: "What level of support do you offer?", answer: "We are available 24/7 to offer support if you encounter any issues while using this platform." },
               { question: "How do I withdraw my profits?", answer: "It is very easy to place withdrawals. Simply login to your account and click 'Withdrawal'. Next enter the withdrawal amount and your desired withdrawal method. Select an account to withdraw from and click proceed." },
@@ -1014,7 +1014,7 @@ export default function LandingPage() {
             {/* About */}
             <div>
               <h3 className={`font-extrabold text-xl mb-4 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`}>
-                SecureTrading
+                SecureProTrading
               </h3>
               <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                 We help your money grow by putting it to work. Our experts ensure not only that your funds are at work, but are put in carefully planned and strategically diversified trading and investment portfolio.
@@ -1068,7 +1068,7 @@ export default function LandingPage() {
           <div className={`pt-8 border-t text-center text-sm ${
             isDarkMode ? 'border-slate-800 text-slate-400' : 'border-indigo-100 text-gray-600'
           }`}>
-            <p>© 2026 All Rights Reserved By SecureTrading</p>
+            <p>© 2026 All Rights Reserved By SecureProTrading</p>
           </div>
         </div>
       </footer>

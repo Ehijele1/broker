@@ -152,7 +152,7 @@ export default function AboutPage() {
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-extrabold mb-6">
-            About <span className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}>SecureTrading</span>
+            About <span className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}>SecureProTrading</span>
           </h1>
           <p className={`text-xl max-w-3xl mx-auto ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
             We're on a mission to democratize trading and make financial markets accessible to everyone, 
@@ -180,7 +180,7 @@ export default function AboutPage() {
             <div>
               <h2 className="text-4xl font-extrabold mb-6">Our Story</h2>
               <p className={`mb-4 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                Founded in 2015, SecureTrading was born from a simple vision: to create a trading platform 
+                Founded in 2015, SecureProTrading was born from a simple vision: to create a trading platform 
                 that combines cutting-edge technology with user-friendly design, making professional trading 
                 accessible to everyone.
               </p>
@@ -303,7 +303,7 @@ export default function AboutPage() {
             <Timeline 
               year="2015"
               title="The Beginning"
-              description="SecureTrading was founded with a vision to revolutionize online trading."
+              description="SecureProTrading was founded with a vision to revolutionize online trading."
               isDarkMode={isDarkMode}
             />
             <Timeline 
@@ -402,7 +402,7 @@ export default function AboutPage() {
             Ready to Start Your Trading Journey?
           </h2>
           <p className={`text-lg mb-8 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-            Join thousands of traders who trust SecureTrading for their financial success
+            Join thousands of traders who trust SecureProTrading for their financial success
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <a 
@@ -437,7 +437,7 @@ export default function AboutPage() {
             {/* About */}
             <div>
               <h3 className={`font-extrabold text-xl mb-4 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`}>
-                SecureTrading
+                SecureProTrading
               </h3>
               <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                 We help your money grow by putting it to work. Our experts ensure not only that your funds are at work, but are put in carefully planned and strategically diversified trading and investment portfolio.
@@ -491,7 +491,7 @@ export default function AboutPage() {
           <div className={`pt-8 border-t text-center text-sm ${
             isDarkMode ? 'border-slate-800 text-slate-400' : 'border-indigo-100 text-gray-600'
           }`}>
-            <p>© 2026 All Rights Reserved By SecureTrading</p>
+            <p>© 2026 All Rights Reserved By SecureProTrading</p>
           </div>
         </div>
       </footer>

@@ -174,8 +174,8 @@ export default function ContactPage() {
             <ContactCard 
               icon={Mail}
               title="Email Us"
-              content="support@securetrading.com"
-              link="mailto:support@securetrading.com"
+              content="info@secureProtrading.com"
+              link="mailto:info@secureProtrading.com"
               isDarkMode={isDarkMode}
             />
             <ContactCard 
@@ -394,7 +394,7 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium">Email</p>
                       <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                        support@securetrading.com
+                        info@secureprotrading.com
                       </p>
                     </div>
                   </div>
@@ -527,7 +527,7 @@ export default function ContactPage() {
             {/* About */}
             <div>
               <h3 className={`font-extrabold text-xl mb-4 ${isDarkMode ? 'text-emerald-400' : 'text-indigo-600'}`}>
-                SecureTrading
+                SecureProTrading
               </h3>
               <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                 We help your money grow by putting it to work. Our experts ensure not only that your funds are at work, but are put in carefully planned and strategically diversified trading and investment portfolio.
@@ -581,7 +581,7 @@ export default function ContactPage() {
           <div className={`pt-8 border-t text-center text-sm ${
             isDarkMode ? 'border-slate-800 text-slate-400' : 'border-indigo-100 text-gray-600'
           }`}>
-            <p>© 2026 All Rights Reserved By SecureTrading</p>
+            <p>© 2026 All Rights Reserved By SecureProTrading</p>
           </div>
         </div>
       </footer>
