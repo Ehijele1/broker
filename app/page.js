@@ -439,6 +439,49 @@ export default function LandingPage() {
     try {
       const { supabase } = await import('@/lib/supabase')
       
+      // Check if there's a hash in the URL (email confirmation)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+      const type = hashParams.get('type')
+      
+      // If this is an email confirmation callback
+      if (accessToken && type === 'signup') {
+        console.log('Processing email confirmation...')
+        
+        // Set the session with the tokens from the URL
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        })
+        
+        if (sessionError) {
+          console.error('Error setting session:', sessionError)
+          setCheckingAuth(false)
+          return
+        }
+        
+        // Clear the hash from URL
+        window.history.replaceState(null, '', window.location.pathname)
+        
+        // Now check the user and redirect
+        if (sessionData.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', sessionData.user.id)
+            .single()
+          
+          if (profile?.role === 'admin') {
+            window.location.href = '/admin/dashboard'
+          } else {
+            window.location.href = '/user/dashboard'
+          }
+          return
+        }
+      }
+      
+      // Normal authentication check (no email confirmation)
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
