@@ -4,7 +4,7 @@ export const metadata = {
   title: 'SecureProTrading',
   description: 'Professional Trading Platform',
   icons: {
-    icon: '/favicon.png',  // or whatever you named it
+    icon: '/logo.png',  // or whatever you named it
   },
 }
 
