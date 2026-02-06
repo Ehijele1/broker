@@ -350,16 +350,23 @@ export default function LandingPage() {
     localStorage.setItem('selectedLanguage', langCode);
     
     if (langCode === 'en') {
-      // Reset to original language
+      // FIRST: Update localStorage to 'en' immediately
+      localStorage.setItem('selectedLanguage', 'en');
+      
+      // Reset Google Translate dropdown
       const translateElement = document.querySelector('.goog-te-combo');
       if (translateElement) {
         translateElement.value = '';
         translateElement.dispatchEvent(new Event('change'));
       }
       
-      // Remove Google Translate cookies
+      // Remove ALL Google Translate cookies (try multiple domains)
       document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname;
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname;
+      
+      // Clear any other Google Translate storage
+      sessionStorage.removeItem('googtrans');
       
       // Reload the page to reset
       setTimeout(() => {
@@ -367,13 +374,19 @@ export default function LandingPage() {
       }, 100);
     } else {
       // Trigger Google Translate for other languages
-      setTimeout(() => {
+      // Increase timeout and add retry logic
+      const triggerTranslation = (attempts = 0) => {
         const selectElement = document.querySelector('.goog-te-combo');
         if (selectElement) {
           selectElement.value = langCode;
           selectElement.dispatchEvent(new Event('change'));
+        } else if (attempts < 10) {
+          // Retry if element not found (max 10 attempts = 5 seconds)
+          setTimeout(() => triggerTranslation(attempts + 1), 500);
         }
-      }, 500);
+      };
+      
+      setTimeout(() => triggerTranslation(), 1000);
     }
   };
 
