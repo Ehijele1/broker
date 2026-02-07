@@ -72,7 +72,7 @@ export default function WithdrawalPage() {
       icon: <Building2 className="w-6 h-6" />,
       description: 'Withdraw to bank account',
       processingTime: '3-5 business days',
-      fees: '1%',
+      fees: '5%',
       minAmount: 100,
       color: 'from-emerald-500 to-teal-500'
     }
@@ -650,7 +650,7 @@ export default function WithdrawalPage() {
             </div>
           </div>
 
-          {/* Security Badge */}
+          {/* Security Badge 
           <div className={`rounded-2xl p-6 border ${
             isDarkMode 
               ? 'bg-slate-900/50 backdrop-blur-sm border-slate-800/50' 
@@ -675,7 +675,7 @@ export default function WithdrawalPage() {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Help Section */}
           <div className={`rounded-2xl p-6 border ${

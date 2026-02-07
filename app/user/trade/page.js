@@ -565,7 +565,7 @@ export default function TradePage() {
         </div>
       )}
 
-      {/* Top Bar */}
+      {/* Top Bar 
       <header className="sticky top-0 z-30 bg-black text-white border-b border-gray-800">
         <div className="px-4 py-3">
           {/* Top ticker - UPDATED WITH NVIDIA AND GOLD (REAL PRICES) 
@@ -574,7 +574,7 @@ export default function TradePage() {
             <TickerItem label="NVDA" value="188.50" change="+1.58" percent="+0.85%" positive={true} />
             <TickerItem label="Gold" value="4,667.50" change="+73.25" percent="+1.60%" positive={true} />
             <TickerItem label="Bitcoin" value="91,126" change="-1,434" percent="-1.55%" positive={false} />
-          </div>*/}
+          </div>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -597,7 +597,7 @@ export default function TradePage() {
             </div>
           </div>
         </div>
-      </header>
+      </header> */}
 
       {/* Main Content */}
       <div className="flex flex-col lg:flex-row">

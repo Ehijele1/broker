@@ -83,7 +83,41 @@ export default function SettingsPage() {
     { id: 'preferences', name: 'Preferences', icon: <Globe className="w-5 h-5" /> }
   ]
 
-  const currencies = ['USD', 'EUR', 'GBP', 'NGN', 'ZAR', 'KES', 'GHS']
+  const currencies = [
+    'USD',
+    'EUR',
+    'GBP',
+    'NGN',
+    'ZAR',
+    'KES',
+    'GHS',
+    'JPY',
+    'AUD',
+    'CAD',
+    'CHF',
+    'CNY',
+    'HKD',
+    'NZD',
+    'SEK',
+    'KRW',
+    'SGD',
+    'NOK',
+    'MXN',
+    'INR',
+    'BRL',
+    'DKK',
+    'PLN',
+    'THB',
+    'TWD',
+    'ILS',
+    'IDR',
+    'SAR',
+    'AED',
+    'CZK',
+    'HUF',
+    'TRY'
+  ]
+  
 
   const convertCurrency = async (fromCurrency, toCurrency, amount) => {
     if (fromCurrency === toCurrency) {
@@ -412,7 +446,7 @@ export default function SettingsPage() {
       console.log('[SAVE] Save complete!')
   
       if (currencyChanged) {
-        setSuccessMessage(`Currency changed to ${currency} and balance converted!`)
+        setSuccessMessage(`Currency changed to ${currency}!`)
       } else {
         setSuccessMessage('Profile updated successfully!')
       }
