@@ -2,8 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { 
-  ArrowUpRight, ArrowDownLeft, Search, Filter, Download,
-  TrendingUp, DollarSign, Users, Calendar
+  ArrowUpRight, ArrowDownLeft, Search, TrendingUp, Calendar
 } from 'lucide-react'
 
 export default function AdminTransactions() {
@@ -288,17 +287,7 @@ export default function AdminTransactions() {
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
-          <button
-            onClick={exportTransactions}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              isDarkMode 
-                ? 'bg-slate-800 hover:bg-slate-700 text-white' 
-                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600'
-            }`}
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          
         </div>
         <div className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
           Showing {filteredTransactions.length} of {transactions.length} transactions
