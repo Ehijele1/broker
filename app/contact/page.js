@@ -178,14 +178,14 @@ export default function ContactPage() {
               link="mailto:info@secureProtrading.com"
               isDarkMode={isDarkMode}
             />
-            <ContactCard 
+            {/*<ContactCard 
               icon={MessageCircle}
               title="WhatsApp Us"
               content="+1 (502) 395-4602"
               link="https://wa.me/15023954602"
               isDarkMode={isDarkMode}
             />
-            {/* <ContactCard 
+             <ContactCard 
               icon={MapPin}
               title="Visit Us"
               content="123 Trading Street, Financial District, NY 10004"
@@ -367,16 +367,6 @@ export default function ContactPage() {
                 isDarkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-indigo-200 shadow-sm'
               }`}>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Phone className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'} size={20} />
-                    <div>
-                      <p className="font-medium">WhatsApp</p>
-                      <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                        +1 (502) 395-4602
-                      </p>
-                    </div>
-                  </div>
-
                   <div className="flex items-start gap-3">
                     <Mail className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'} size={20} />
                     <div>
