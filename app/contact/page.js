@@ -366,25 +366,13 @@ export default function ContactPage() {
               <div className={`p-6 rounded-xl border ${
                 isDarkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-white border-indigo-200 shadow-sm'
               }`}>
-                <h3 className="font-bold text-xl mb-4">Headquarters</h3>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <MapPin className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'} size={20} />
-                    <div>
-                      <p className="font-medium">Address</p>
-                      <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                        123 Trading Street, Financial District<br />
-                        New York, NY 10004, USA
-                      </p>
-                    </div>
-                  </div>
-
                   <div className="flex items-start gap-3">
                     <Phone className={isDarkMode ? 'text-emerald-400' : 'text-indigo-600'} size={20} />
                     <div>
-                      <p className="font-medium">Phone</p>
+                      <p className="font-medium">WhatsApp</p>
                       <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-                        +1 (555) 123-4567
+                        +1 (502) 395-4602
                       </p>
                     </div>
                   </div>
