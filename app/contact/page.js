@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Moon, Sun, Mail, Phone, MapPin, Clock, MessageSquare, Send, CheckCircle, Globe, HeadphonesIcon } from 'lucide-react'
+import { Moon, Sun, Mail, Phone, MapPin, Clock, MessageCircle, MessageSquare, Send, CheckCircle, Globe, HeadphonesIcon } from 'lucide-react'
 import Header from '@/components/Header'
 
 function ContactCard({ icon: Icon, title, content, link, isDarkMode }) {
@@ -179,18 +179,18 @@ export default function ContactPage() {
               isDarkMode={isDarkMode}
             />
             <ContactCard 
-              icon={Phone}
-              title="Call Us"
-              content="+1 (555) 123-4567"
-              link="tel:+15551234567"
+              icon={MessageCircle}
+              title="WhatsApp Us"
+              content="+1 (502) 395-4602"
+              link="https://wa.me/15023954602"
               isDarkMode={isDarkMode}
             />
-            <ContactCard 
+            {/* <ContactCard 
               icon={MapPin}
               title="Visit Us"
               content="123 Trading Street, Financial District, NY 10004"
               isDarkMode={isDarkMode}
-            />
+            /> */}
             <ContactCard 
               icon={Clock}
               title="Working Hours"
