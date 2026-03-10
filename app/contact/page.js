@@ -242,7 +242,7 @@ export default function ContactPage() {
         className={`py-16 px-6 ${isDarkMode ? "bg-slate-900/40" : "bg-white"}`}
       >
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6 text-center">
             <ContactCard
               icon={Mail}
               title="Email Us"
