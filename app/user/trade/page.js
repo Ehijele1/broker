@@ -1,559 +1,643 @@
-'use client'
-import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { 
-  TrendingUp, ArrowLeft, Star, ChevronDown, 
-  Activity, DollarSign, Clock, TrendingDown
-} from 'lucide-react'
+"use client";
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import {
+  TrendingUp,
+  ArrowLeft,
+  Star,
+  ChevronDown,
+  Activity,
+  DollarSign,
+  Clock,
+  TrendingDown,
+} from "lucide-react";
 
 export default function TradePage() {
-  const router = useRouter()
-  const chartContainerRef = useRef(null)
-  const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [isDarkMode, setIsDarkMode] = useState(true)
-  
+  const router = useRouter();
+  const chartContainerRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
   // Trading state
-  const [selectedMarket, setSelectedMarket] = useState('Stock')
-  const [selectedAsset, setSelectedAsset] = useState('AAPL')
+  const [selectedMarket, setSelectedMarket] = useState("Stock");
+  const [selectedAsset, setSelectedAsset] = useState("AAPL");
   const [assetData, setAssetData] = useState({
     price: 0,
     change: 0,
     changePercent: 0,
     high: 0,
     low: 0,
-    volume: '0'
-  })
-  const [livePrice, setLivePrice] = useState(0)
-  const [tradeAmount, setTradeAmount] = useState('')
-  const [selectedTime, setSelectedTime] = useState('')
-  const [selectedLeverage, setSelectedLeverage] = useState('')
-  const [selectedAccount, setSelectedAccount] = useState('')
-  const [timeframe, setTimeframe] = useState('1D')
-  const [favorites, setFavorites] = useState([])
-  const [isFavorite, setIsFavorite] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+    volume: "0",
+  });
+  const [livePrice, setLivePrice] = useState(0);
+  const [tradeAmount, setTradeAmount] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [selectedLeverage, setSelectedLeverage] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const [timeframe, setTimeframe] = useState("1D");
+  const [favorites, setFavorites] = useState([]);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Popular assets by market - UPDATED WITH GOLD, SILVER, AND NVIDIA (REAL PRICES)
   const markets = {
     Stock: [
-      { symbol: 'AAPL', name: 'Apple Inc', price: 255.37, change: -1.04 },
-      { symbol: 'NVDA', name: 'Nvidia Corp', price: 188.50, change: 0.85 },
-      { symbol: 'TSLA', name: 'Tesla Inc', price: 342.89, change: 2.45 },
-      { symbol: 'GOOGL', name: 'Alphabet Inc', price: 178.52, change: 0.89 },
-      { symbol: 'AMZN', name: 'Amazon.com', price: 198.65, change: -0.54 },
-      { symbol: 'MSFT', name: 'Microsoft', price: 425.18, change: 1.23 },
-      { symbol: 'META', name: 'Meta Platforms', price: 512.33, change: -2.11 }
+      { symbol: "AAPL", name: "Apple Inc", price: 255.37, change: -1.04 },
+      { symbol: "NVDA", name: "Nvidia Corp", price: 188.5, change: 0.85 },
+      { symbol: "TSLA", name: "Tesla Inc", price: 342.89, change: 2.45 },
+      { symbol: "GOOGL", name: "Alphabet Inc", price: 178.52, change: 0.89 },
+      { symbol: "AMZN", name: "Amazon.com", price: 198.65, change: -0.54 },
+      { symbol: "MSFT", name: "Microsoft", price: 425.18, change: 1.23 },
+      { symbol: "META", name: "Meta Platforms", price: 512.33, change: -2.11 },
     ],
     Crypto: [
-      { symbol: 'BTC/USD', name: 'Bitcoin', price: 91126, change: -1.55 },
-      { symbol: 'ETH/USD', name: 'Ethereum', price: 3106, change: -2.55 },
-      { symbol: 'SOL/USD', name: 'Solana', price: 133.31, change: 5.14 },
-      { symbol: 'BNB/USD', name: 'Binance Coin', price: 921.34, change: -1.91 },
-      { symbol: 'XRP/USD', name: 'Ripple', price: 1.98, change: -2.13 }
+      { symbol: "BTC/USD", name: "Bitcoin", price: 91126, change: -1.55 },
+      { symbol: "ETH/USD", name: "Ethereum", price: 3106, change: -2.55 },
+      { symbol: "SOL/USD", name: "Solana", price: 133.31, change: 5.14 },
+      { symbol: "BNB/USD", name: "Binance Coin", price: 921.34, change: -1.91 },
+      { symbol: "XRP/USD", name: "Ripple", price: 1.98, change: -2.13 },
     ],
     Forex: [
-      { symbol: 'EUR/USD', name: 'Euro / US Dollar', price: 1.17352, change: 0.78 },
-      { symbol: 'GBP/USD', name: 'British Pound / USD', price: 1.3245, change: -0.34 },
-      { symbol: 'USD/JPY', name: 'USD / Japanese Yen', price: 149.82, change: 0.12 },
-      { symbol: 'AUD/USD', name: 'Australian Dollar / USD', price: 0.6712, change: 0.45 },
-      { symbol: 'USD/CAD', name: 'USD / Canadian Dollar', price: 1.3456, change: -0.23 }
+      {
+        symbol: "EUR/USD",
+        name: "Euro / US Dollar",
+        price: 1.17352,
+        change: 0.78,
+      },
+      {
+        symbol: "GBP/USD",
+        name: "British Pound / USD",
+        price: 1.3245,
+        change: -0.34,
+      },
+      {
+        symbol: "USD/JPY",
+        name: "USD / Japanese Yen",
+        price: 149.82,
+        change: 0.12,
+      },
+      {
+        symbol: "AUD/USD",
+        name: "Australian Dollar / USD",
+        price: 0.6712,
+        change: 0.45,
+      },
+      {
+        symbol: "USD/CAD",
+        name: "USD / Canadian Dollar",
+        price: 1.3456,
+        change: -0.23,
+      },
     ],
     Commodities: [
-      { symbol: 'XAU/USD', name: 'Gold', price: 4667.50, change: 1.60 },
-      { symbol: 'XAG/USD', name: 'Silver', price: 93.28, change: 3.71 },
-      { symbol: 'WTI', name: 'Crude Oil WTI', price: 78.45, change: -0.67 },
-      { symbol: 'BRENT', name: 'Brent Oil', price: 82.30, change: -0.54 }
+      { symbol: "XAU/USD", name: "Gold", price: 4667.5, change: 1.6 },
+      { symbol: "XAG/USD", name: "Silver", price: 93.28, change: 3.71 },
+      { symbol: "WTI", name: "Crude Oil WTI", price: 78.45, change: -0.67 },
+      { symbol: "BRENT", name: "Brent Oil", price: 82.3, change: -0.54 },
     ],
     Indices: [
-      { symbol: 'SPX', name: 'S&P 500', price: 25116.3, change: -0.51 },
-      { symbol: 'NDX', name: 'NASDAQ 100', price: 18245.6, change: -0.89 },
-      { symbol: 'DJI', name: 'Dow Jones', price: 38723.2, change: -0.34 },
-      { symbol: 'DAX', name: 'DAX 40', price: 19234.5, change: 0.67 },
-      { symbol: 'FTSE', name: 'FTSE 100', price: 8123.4, change: 0.23 }
-    ]
-  }
+      { symbol: "SPX", name: "S&P 500", price: 25116.3, change: -0.51 },
+      { symbol: "NDX", name: "NASDAQ 100", price: 18245.6, change: -0.89 },
+      { symbol: "DJI", name: "Dow Jones", price: 38723.2, change: -0.34 },
+      { symbol: "DAX", name: "DAX 40", price: 19234.5, change: 0.67 },
+      { symbol: "FTSE", name: "FTSE 100", price: 8123.4, change: 0.23 },
+    ],
+  };
 
   // Load theme preference and listen for changes
-    useEffect(() => {
-      const savedTheme = localStorage.getItem('theme')
-      if (savedTheme) {
-        setIsDarkMode(savedTheme === 'dark')
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === "dark");
+    }
+
+    // Listen for theme changes
+    const handleStorageChange = (e) => {
+      if (e.key === "theme") {
+        setIsDarkMode(e.newValue === "dark");
       }
-  
-      // Listen for theme changes
-      const handleStorageChange = (e) => {
-        if (e.key === 'theme') {
-          setIsDarkMode(e.newValue === 'dark')
-        }
-      }
-  
-      // Listen for custom theme change event
-      const handleThemeChange = () => {
-        const savedTheme = localStorage.getItem('theme')
-        setIsDarkMode(savedTheme === 'dark')
-      }
-  
-      window.addEventListener('storage', handleStorageChange)
-      window.addEventListener('themeChange', handleThemeChange)
-  
-      return () => {
-        window.removeEventListener('storage', handleStorageChange)
-        window.removeEventListener('themeChange', handleThemeChange)
-      }
-    }, [])
+    };
+
+    // Listen for custom theme change event
+    const handleThemeChange = () => {
+      const savedTheme = localStorage.getItem("theme");
+      setIsDarkMode(savedTheme === "dark");
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("themeChange", handleThemeChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("themeChange", handleThemeChange);
+    };
+  }, []);
 
   useEffect(() => {
-    checkUser()
+    checkUser();
     // Initialize first asset
-    const firstAsset = markets.Stock[0]
-    handleAssetChange(firstAsset)
-  }, [])
+    const firstAsset = markets.Stock[0];
+    handleAssetChange(firstAsset);
+  }, []);
 
   // Fetch real-time price data - UPDATED WITH COMMODITIES SUPPORT
   const fetchLivePrice = async () => {
     try {
-      let url = ''
-      let newPrice = null
-      
-      if (selectedMarket === 'Crypto') {
+      let url = "";
+      let newPrice = null;
+
+      if (selectedMarket === "Crypto") {
         // Use CoinGecko API for crypto prices
         const cryptoIds = {
-          'BTC/USD': 'bitcoin',
-          'ETH/USD': 'ethereum',
-          'SOL/USD': 'solana',
-          'BNB/USD': 'binancecoin',
-          'XRP/USD': 'ripple'
-        }
-        const coinId = cryptoIds[selectedAsset]
+          "BTC/USD": "bitcoin",
+          "ETH/USD": "ethereum",
+          "SOL/USD": "solana",
+          "BNB/USD": "binancecoin",
+          "XRP/USD": "ripple",
+        };
+        const coinId = cryptoIds[selectedAsset];
         if (coinId) {
-          url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
-          const response = await fetch(url)
-          const data = await response.json()
-          
+          url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`;
+          const response = await fetch(url);
+          const data = await response.json();
+
           if (data[coinId]) {
-            newPrice = data[coinId].usd
-            const change24h = data[coinId].usd_24h_change || 0
-            
+            newPrice = data[coinId].usd;
+            const change24h = data[coinId].usd_24h_change || 0;
+
             // Update asset data with real values
-            setAssetData(prev => ({
+            setAssetData((prev) => ({
               ...prev,
               price: newPrice,
               changePercent: change24h,
               change: newPrice * (change24h / 100),
               high: newPrice * 1.02,
-              low: newPrice * 0.98
-            }))
-            setLivePrice(newPrice)
+              low: newPrice * 0.98,
+            }));
+            setLivePrice(newPrice);
           }
         }
-      } else if (selectedMarket === 'Commodities') {
+      } else if (selectedMarket === "Commodities") {
         // REAL-TIME COMMODITIES PRICES
         // Using Metals-API for Gold & Silver (free tier)
         // Alternative: CoinGecko also tracks gold/silver as commodities
-        
-        if (selectedAsset === 'XAU/USD' || selectedAsset === 'XAG/USD') {
+
+        if (selectedAsset === "XAU/USD" || selectedAsset === "XAG/USD") {
           try {
             // Use CoinGecko's commodities API (free, no API key needed)
             const metalIds = {
-              'XAU/USD': 'gold',
-              'XAG/USD': 'silver'
-            }
-            const metalId = metalIds[selectedAsset]
-            
+              "XAU/USD": "gold",
+              "XAG/USD": "silver",
+            };
+            const metalId = metalIds[selectedAsset];
+
             if (metalId) {
-              url = `https://api.coingecko.com/api/v3/simple/price?ids=${metalId}&vs_currencies=usd&include_24hr_change=true`
-              const response = await fetch(url)
-              const data = await response.json()
-              
+              url = `https://api.coingecko.com/api/v3/simple/price?ids=${metalId}&vs_currencies=usd&include_24hr_change=true`;
+              const response = await fetch(url);
+              const data = await response.json();
+
               if (data[metalId]) {
                 // CoinGecko returns price per troy ounce
-                newPrice = data[metalId].usd
-                const change24h = data[metalId].usd_24h_change || 0
-                
-                setAssetData(prev => ({
+                newPrice = data[metalId].usd;
+                const change24h = data[metalId].usd_24h_change || 0;
+
+                setAssetData((prev) => ({
                   ...prev,
                   price: newPrice,
                   changePercent: change24h,
                   change: newPrice * (change24h / 100),
                   high: newPrice * 1.02,
                   low: newPrice * 0.98,
-                  volume: '1.2M oz'
-                }))
-                setLivePrice(newPrice)
+                  volume: "1.2M oz",
+                }));
+                setLivePrice(newPrice);
               }
             }
           } catch (apiError) {
-            console.error('Commodities API error:', apiError)
+            console.error("Commodities API error:", apiError);
             // Fallback to small simulation if API fails
             if (assetData.price > 0) {
-              const fluctuation = (Math.random() - 0.5) * 0.002 * assetData.price
-              newPrice = assetData.price + fluctuation
-              setLivePrice(newPrice)
+              const fluctuation =
+                (Math.random() - 0.5) * 0.002 * assetData.price;
+              newPrice = assetData.price + fluctuation;
+              setLivePrice(newPrice);
             }
           }
         } else {
           // For Oil (WTI, BRENT) - simulate until oil API is added
           if (assetData.price > 0) {
-            const fluctuation = (Math.random() - 0.5) * 0.002 * assetData.price
-            newPrice = assetData.price + fluctuation
-            setLivePrice(newPrice)
-            setAssetData(prev => ({
+            const fluctuation = (Math.random() - 0.5) * 0.002 * assetData.price;
+            newPrice = assetData.price + fluctuation;
+            setLivePrice(newPrice);
+            setAssetData((prev) => ({
               ...prev,
-              price: newPrice
-            }))
+              price: newPrice,
+            }));
           }
         }
-      } else if (selectedMarket === 'Stock') {
+      } else if (selectedMarket === "Stock") {
         // REAL-TIME STOCK PRICES
         // Using Finnhub API (free tier) - get your free API key at https://finnhub.io
         // Alternative: Yahoo Finance API, Alpha Vantage, Financial Modeling Prep
-        
+
         try {
           // Finnhub free API key (demo key - replace with your own for production)
           // Sign up at https://finnhub.io/register for free API key
-          const apiKey = 'YOUR_FINNHUB_API_KEY' // Replace with actual API key
-          
+          const apiKey = "YOUR_FINNHUB_API_KEY"; // Replace with actual API key
+
           // For demo purposes, using a public finance API (no key needed)
           // This is Yahoo Finance alternative endpoint
-          url = `https://query1.finance.yahoo.com/v8/finance/chart/${selectedAsset}?interval=1m&range=1d`
-          
-          const response = await fetch(url)
-          const data = await response.json()
-          
+          url = `https://query1.finance.yahoo.com/v8/finance/chart/${selectedAsset}?interval=1m&range=1d`;
+
+          const response = await fetch(url);
+          const data = await response.json();
+
           if (data.chart && data.chart.result && data.chart.result[0]) {
-            const result = data.chart.result[0]
-            const quote = result.meta
-            
+            const result = data.chart.result[0];
+            const quote = result.meta;
+
             if (quote.regularMarketPrice) {
-              newPrice = quote.regularMarketPrice
-              const previousClose = quote.previousClose || newPrice
-              const change = newPrice - previousClose
-              const changePercent = (change / previousClose) * 100
-              
-              setAssetData(prev => ({
+              newPrice = quote.regularMarketPrice;
+              const previousClose = quote.previousClose || newPrice;
+              const change = newPrice - previousClose;
+              const changePercent = (change / previousClose) * 100;
+
+              setAssetData((prev) => ({
                 ...prev,
                 price: newPrice,
                 changePercent: changePercent,
                 change: change,
                 high: quote.regularMarketDayHigh || newPrice * 1.02,
                 low: quote.regularMarketDayLow || newPrice * 0.98,
-                volume: quote.regularMarketVolume ? (quote.regularMarketVolume / 1000000).toFixed(2) + 'M' : '0'
-              }))
-              setLivePrice(newPrice)
+                volume: quote.regularMarketVolume
+                  ? (quote.regularMarketVolume / 1000000).toFixed(2) + "M"
+                  : "0",
+              }));
+              setLivePrice(newPrice);
             }
           } else {
-            throw new Error('Invalid response from stock API')
+            throw new Error("Invalid response from stock API");
           }
         } catch (apiError) {
-          console.error('Stock API error:', apiError)
+          console.error("Stock API error:", apiError);
           // Fallback to small simulation if API fails
           if (assetData.price > 0) {
-            const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price
-            newPrice = assetData.price + fluctuation
-            setLivePrice(newPrice)
-            setAssetData(prev => ({
+            const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price;
+            newPrice = assetData.price + fluctuation;
+            setLivePrice(newPrice);
+            setAssetData((prev) => ({
               ...prev,
-              price: newPrice
-            }))
+              price: newPrice,
+            }));
           }
         }
-      } else if (selectedMarket === 'Forex') {
+      } else if (selectedMarket === "Forex") {
         // For forex, use exchange rate API
-        const pairs = selectedAsset.split('/')
+        const pairs = selectedAsset.split("/");
         if (pairs.length === 2) {
-          url = `https://api.exchangerate-api.com/v4/latest/${pairs[0]}`
-          const response = await fetch(url)
-          const data = await response.json()
-          
+          url = `https://api.exchangerate-api.com/v4/latest/${pairs[0]}`;
+          const response = await fetch(url);
+          const data = await response.json();
+
           if (data.rates && data.rates[pairs[1]]) {
-            newPrice = data.rates[pairs[1]]
-            setLivePrice(newPrice)
-            setAssetData(prev => ({
+            newPrice = data.rates[pairs[1]];
+            setLivePrice(newPrice);
+            setAssetData((prev) => ({
               ...prev,
-              price: newPrice
-            }))
+              price: newPrice,
+            }));
           }
         }
-      } else if (selectedMarket === 'Indices') {
+      } else if (selectedMarket === "Indices") {
         // For indices, simulate small changes
         if (assetData.price > 0) {
-          const fluctuation = (Math.random() - 0.5) * 0.003 * assetData.price
-          newPrice = assetData.price + fluctuation
-          setLivePrice(newPrice)
-          setAssetData(prev => ({
+          const fluctuation = (Math.random() - 0.5) * 0.003 * assetData.price;
+          newPrice = assetData.price + fluctuation;
+          setLivePrice(newPrice);
+          setAssetData((prev) => ({
             ...prev,
-            price: newPrice
-          }))
+            price: newPrice,
+          }));
         }
       }
     } catch (error) {
-      console.error('Error fetching live price:', error)
+      console.error("Error fetching live price:", error);
       // Fallback to simulation on error
       if (assetData.price > 0) {
-        const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price
-        const newPrice = assetData.price + fluctuation
-        setLivePrice(newPrice)
+        const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price;
+        const newPrice = assetData.price + fluctuation;
+        setLivePrice(newPrice);
       }
     }
-  }
+  };
 
   useEffect(() => {
     // Fetch immediately when asset changes
-    fetchLivePrice()
+    fetchLivePrice();
 
     // Then fetch every 3 seconds for real-time updates
-    const priceInterval = setInterval(fetchLivePrice, 3000)
+    const priceInterval = setInterval(fetchLivePrice, 3000);
 
-    return () => clearInterval(priceInterval)
-  }, [selectedAsset, selectedMarket])
+    return () => clearInterval(priceInterval);
+  }, [selectedAsset, selectedMarket]);
 
   useEffect(() => {
     // Load TradingView widget
-    if (chartContainerRef.current && typeof window !== 'undefined') {
-      const script = document.createElement('script')
-      script.src = 'https://s3.tradingview.com/tv.js'
-      script.async = true
+    if (chartContainerRef.current && typeof window !== "undefined") {
+      const script = document.createElement("script");
+      script.src = "https://s3.tradingview.com/tv.js";
+      script.async = true;
       script.onload = () => {
         if (window.TradingView) {
           new window.TradingView.widget({
             autosize: true,
             symbol: getSymbolForChart(),
-            interval: 'D',
-            timezone: 'Etc/UTC',
-            theme: 'light',
-            style: '1',
-            locale: 'en',
-            toolbar_bg: '#f1f3f6',
+            interval: "D",
+            timezone: "Etc/UTC",
+            theme: "light",
+            style: "1",
+            locale: "en",
+            toolbar_bg: "#f1f3f6",
             enable_publishing: false,
             hide_side_toolbar: false,
             allow_symbol_change: true,
-            container_id: 'tradingview_chart',
-            studies: [
-              'MASimple@tv-basicstudies'
-            ],
-            disabled_features: ['use_localstorage_for_settings']
-          })
+            container_id: "tradingview_chart",
+            studies: ["MASimple@tv-basicstudies"],
+            disabled_features: ["use_localstorage_for_settings"],
+          });
         }
-      }
-      document.head.appendChild(script)
+      };
+      document.head.appendChild(script);
 
       return () => {
         if (script.parentNode) {
-          script.parentNode.removeChild(script)
+          script.parentNode.removeChild(script);
         }
-      }
+      };
     }
-  }, [selectedAsset, selectedMarket])
+  }, [selectedAsset, selectedMarket]);
 
   const getSymbolForChart = () => {
-    if (selectedMarket === 'Stock') {
-      if (selectedAsset === 'NVDA') return 'NASDAQ:NVDA'
-      return `NASDAQ:${selectedAsset}`
+    if (selectedMarket === "Stock") {
+      if (selectedAsset === "NVDA") return "NASDAQ:NVDA";
+      return `NASDAQ:${selectedAsset}`;
     }
-    if (selectedMarket === 'Crypto') return `BINANCE:${selectedAsset.replace('/USD', 'USDT')}`
-    if (selectedMarket === 'Forex') return `FX:${selectedAsset.replace('/', '')}`
-    if (selectedMarket === 'Commodities') {
-      if (selectedAsset === 'XAU/USD') return 'TVC:GOLD'
-      if (selectedAsset === 'XAG/USD') return 'TVC:SILVER'
-      if (selectedAsset === 'WTI') return 'TVC:USOIL'
-      if (selectedAsset === 'BRENT') return 'TVC:UKOIL'
-      return selectedAsset
+    if (selectedMarket === "Crypto")
+      return `BINANCE:${selectedAsset.replace("/USD", "USDT")}`;
+    if (selectedMarket === "Forex")
+      return `FX:${selectedAsset.replace("/", "")}`;
+    if (selectedMarket === "Commodities") {
+      if (selectedAsset === "XAU/USD") return "TVC:GOLD";
+      if (selectedAsset === "XAG/USD") return "TVC:SILVER";
+      if (selectedAsset === "WTI") return "TVC:USOIL";
+      if (selectedAsset === "BRENT") return "TVC:UKOIL";
+      return selectedAsset;
     }
-    if (selectedMarket === 'Indices') {
-      if (selectedAsset === 'SPX') return 'SP:SPX'
-      if (selectedAsset === 'NDX') return 'NASDAQ:NDX'
-      if (selectedAsset === 'DJI') return 'DJ:DJI'
-      return selectedAsset
+    if (selectedMarket === "Indices") {
+      if (selectedAsset === "SPX") return "SP:SPX";
+      if (selectedAsset === "NDX") return "NASDAQ:NDX";
+      if (selectedAsset === "DJI") return "DJ:DJI";
+      return selectedAsset;
     }
-    return selectedAsset
-  }
+    return selectedAsset;
+  };
 
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency) => {
     const symbols = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'AUD': 'A$',
-      'CAD': 'C$',
-      'CHF': 'CHF',
-      'CNY': '¥',
-      'INR': '₹',
-      'NGN': '₦'
-    }
-    return symbols[currency] || currency
-  }
+      USD: "$",
+      EUR: "€",
+      GBP: "£",
+      JPY: "¥",
+      AUD: "A$",
+      CAD: "C$",
+      CHF: "CHF",
+      CNY: "¥",
+      INR: "₹",
+      NGN: "₦",
+    };
+    return symbols[currency] || currency;
+  };
 
   const checkUser = async () => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
       if (userError || !user) {
-        router.push('/signin')
-        return
+        router.push("/signin");
+        return;
       }
 
-      setUser(user)
+      setUser(user);
 
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
-      if (profileError) throw profileError
+      if (profileError) throw profileError;
 
-      if (profileData.role === 'admin') {
-        router.push('/admin/dashboard')
-        return
+      if (profileData.role === "admin") {
+        router.push("/admin/dashboard");
+        return;
       }
 
-      setProfile(profileData)
+      setProfile(profileData);
     } catch (error) {
-      console.error('Error:', error)
+      console.error("Error:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleAssetChange = (asset) => {
-    setSelectedAsset(asset.symbol)
-    const newPrice = asset.price
+    setSelectedAsset(asset.symbol);
+    const newPrice = asset.price;
     setAssetData({
       price: newPrice,
       change: newPrice * (asset.change / 100),
       changePercent: asset.change,
       high: newPrice * 1.02,
       low: newPrice * 0.98,
-      volume: '72.14M'
-    })
-    setLivePrice(newPrice)
-  }
+      volume: "72.14M",
+    });
+    setLivePrice(newPrice);
+  };
 
   const toggleFavorite = () => {
-    setIsFavorite(!isFavorite)
+    setIsFavorite(!isFavorite);
     if (!isFavorite) {
-      setFavorites([...favorites, selectedAsset])
+      setFavorites([...favorites, selectedAsset]);
     } else {
-      setFavorites(favorites.filter(f => f !== selectedAsset))
+      setFavorites(favorites.filter((f) => f !== selectedAsset));
     }
-  }
+  };
 
   const handleTrade = async (type) => {
     // Validate inputs
-    if (!tradeAmount || !selectedTime || !selectedLeverage || !selectedAccount) {
-      alert('Please fill in all fields')
-      return
+    if (
+      !tradeAmount ||
+      !selectedTime ||
+      !selectedLeverage ||
+      !selectedAccount
+    ) {
+      alert("Please fill in all fields");
+      return;
     }
-  
+
     if (parseFloat(tradeAmount) <= 0) {
-      alert('Please enter a valid amount')
-      return
+      alert("Please enter a valid amount");
+      return;
     }
-  
+
     if (parseFloat(tradeAmount) > parseFloat(profile.balance)) {
-      alert('Insufficient balance')
-      return
+      alert("Insufficient balance");
+      return;
     }
-  
+
     try {
-      setShowSuccess(false)
-  
+      setShowSuccess(false);
+
       // Create trade record in database
       const { data, error } = await supabase
-        .from('trades')
+        .from("trades")
         .insert([
           {
             user_id: profile.id,
             asset: selectedAsset,
             amount: parseFloat(tradeAmount),
             trade_type: type,
-            leverage: selectedLeverage + 'x',
-            timeframe: selectedTime === '1' ? '1 minute' :
-                       selectedTime === '2' ? '2 minutes' :
-                       selectedTime === '3' ? '3 minutes' :
-                       selectedTime === '5' ? '5 minutes' :
-                       selectedTime === '7' ? '10 minutes' :
-                       selectedTime === '10' ? '10 minutes' :
-                       selectedTime === '15' ? '15 minutes' :
-                       selectedTime === '30' ? '30 minutes' :
-                       selectedTime === '60' ? '1 hour' :
-                       selectedTime === '240' ? '4 hours' :
-                       selectedTime === '1440' ? '1 day' : selectedTime + ' minutes',
+            leverage: selectedLeverage + "x",
+            timeframe:
+              selectedTime === "1"
+                ? "1 minute"
+                : selectedTime === "2"
+                  ? "2 minutes"
+                  : selectedTime === "3"
+                    ? "3 minutes"
+                    : selectedTime === "5"
+                      ? "5 minutes"
+                      : selectedTime === "7"
+                        ? "10 minutes"
+                        : selectedTime === "10"
+                          ? "10 minutes"
+                          : selectedTime === "15"
+                            ? "15 minutes"
+                            : selectedTime === "30"
+                              ? "30 minutes"
+                              : selectedTime === "60"
+                                ? "1 hour"
+                                : selectedTime === "240"
+                                  ? "4 hours"
+                                  : selectedTime === "1440"
+                                    ? "1 day"
+                                    : selectedTime + " minutes",
             entry_price: livePrice > 0 ? livePrice : assetData.price,
-            status: 'active'
-          }
+            status: "active",
+          },
         ])
-        .select()
-  
-      if (error) throw error
-  
+        .select();
+
+      if (error) throw error;
+
+      const newBalance = parseFloat(profile.balance) - parseFloat(tradeAmount);
+
+      const { error: balanceError } = await supabase
+        .from("profiles")
+        .update({ balance: newBalance })
+        .eq("id", profile.id);
+
+      if (balanceError) throw balanceError;
+
+      setProfile((prev) => ({ ...prev, balance: newBalance }));
+
       // Show success message
-      setSuccessMessage(`${type.toUpperCase()} order placed: ${tradeAmount} ${profile.currency} on ${selectedAsset}`)
-      setShowSuccess(true)
-      
+      setSuccessMessage(
+        `${type.toUpperCase()} order placed: ${tradeAmount} ${profile.currency} on ${selectedAsset}`,
+      );
+      setShowSuccess(true);
+
       // Clear form
-      setTradeAmount('')
-      setSelectedTime('')
-      setSelectedLeverage('')
-      setSelectedAccount('')
-  
+      setTradeAmount("");
+      setSelectedTime("");
+      setSelectedLeverage("");
+      setSelectedAccount("");
+
       // Hide success message and redirect after 2 seconds
       setTimeout(() => {
-        setShowSuccess(false)
-        router.push('/user/my-trades')
-      }, 2000)
-  
+        setShowSuccess(false);
+        router.push("/user/my-trades");
+      }, 2000);
     } catch (error) {
-      console.error('Error creating trade:', error)
-      alert('Failed to place trade. Please try again.')
+      console.error("Error creating trade:", error);
+      alert("Failed to place trade. Please try again.");
     }
-  }
+  };
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${
-        isDarkMode 
-          ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' 
-          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
-      }`}>
+      <div
+        className={`min-h-screen flex items-center justify-center ${
+          isDarkMode
+            ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
+            : "bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"
+        }`}
+      >
         <div className="flex justify-center">
           <div className="relative">
             {/* Logo */}
-            <div className={`w-20 h-20 rounded-lg flex items-center justify-center shadow-lg ${
-            isDarkMode
-              ? 'bg-gradient-to-br from-emerald-600 to-teal-600'
-              : 'bg-gradient-to-br from-blue-600 to-indigo-600'
-          }`}>
-            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
+            <div
+              className={`w-20 h-20 rounded-lg flex items-center justify-center shadow-lg ${
+                isDarkMode
+                  ? "bg-gradient-to-br from-emerald-600 to-teal-600"
+                  : "bg-gradient-to-br from-blue-600 to-indigo-600"
+              }`}
+            >
+              <svg
+                className="w-12 h-12 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
+              </svg>
             </div>
-            
+
             {/* Spinning circle around logo */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className={`w-24 h-24 border-4 rounded-full animate-spin ${
-                isDarkMode
-                ? 'border-emerald-500/20 border-t-emerald-500'
-                : 'border-indigo-200 border-t-indigo-600'
-                }`}>
-              </div>
+              <div
+                className={`w-24 h-24 border-4 rounded-full animate-spin ${
+                  isDarkMode
+                    ? "border-emerald-500/20 border-t-emerald-500"
+                    : "border-indigo-200 border-t-indigo-600"
+                }`}
+              ></div>
             </div>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!profile) return null
+  if (!profile) return null;
 
-  const currentMarketAssets = markets[selectedMarket]
-  const currentAsset = currentMarketAssets.find(a => a.symbol === selectedAsset) || currentMarketAssets[0]
+  const currentMarketAssets = markets[selectedMarket];
+  const currentAsset =
+    currentMarketAssets.find((a) => a.symbol === selectedAsset) ||
+    currentMarketAssets[0];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -605,13 +689,13 @@ export default function TradePage() {
         <div className="flex-1 p-4 lg:p-6">
           {/* Market & Asset Selection - UPDATED WITH COMMODITIES */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <select 
+            <select
               value={selectedMarket}
               onChange={(e) => {
-                setSelectedMarket(e.target.value)
-                const newMarket = e.target.value
-                const firstAsset = markets[newMarket][0]
-                handleAssetChange(firstAsset)
+                setSelectedMarket(e.target.value);
+                const newMarket = e.target.value;
+                const firstAsset = markets[newMarket][0];
+                handleAssetChange(firstAsset);
               }}
               className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
@@ -622,15 +706,17 @@ export default function TradePage() {
               <option value="Indices">Indices</option>
             </select>
 
-            <select 
+            <select
               value={selectedAsset}
               onChange={(e) => {
-                const asset = currentMarketAssets.find(a => a.symbol === e.target.value)
-                if (asset) handleAssetChange(asset)
+                const asset = currentMarketAssets.find(
+                  (a) => a.symbol === e.target.value,
+                );
+                if (asset) handleAssetChange(asset);
               }}
               className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
-              {currentMarketAssets.map(asset => (
+              {currentMarketAssets.map((asset) => (
                 <option key={asset.symbol} value={asset.symbol}>
                   {asset.symbol} - {asset.name}
                 </option>
@@ -642,18 +728,29 @@ export default function TradePage() {
           <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-gray-900">{currentAsset.name}</h2>
-                <span className="text-sm text-gray-500">· {timeframe} · Live</span>
-                <button 
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {currentAsset.name}
+                </h2>
+                <span className="text-sm text-gray-500">
+                  · {timeframe} · Live
+                </span>
+                <button
                   onClick={toggleFavorite}
-                  className={`p-1 ${isFavorite ? 'text-yellow-500' : 'text-gray-400'} hover:text-yellow-500`}
+                  className={`p-1 ${isFavorite ? "text-yellow-500" : "text-gray-400"} hover:text-yellow-500`}
                 >
-                  <Star className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} />
+                  <Star
+                    className="w-5 h-5"
+                    fill={isFavorite ? "currentColor" : "none"}
+                  />
                 </button>
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-3xl font-bold text-gray-900">
-                  ${(livePrice > 0 ? livePrice : assetData.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  $
+                  {(livePrice > 0 ? livePrice : assetData.price).toLocaleString(
+                    undefined,
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                  )}
                 </p>
                 <div className="flex items-center gap-2 text-sm">
                   {assetData.changePercent >= 0 ? (
@@ -661,8 +758,16 @@ export default function TradePage() {
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-600" />
                   )}
-                  <span className={assetData.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}>
-                    {assetData.changePercent >= 0 ? '+' : ''}{assetData.change.toFixed(2)} ({assetData.changePercent.toFixed(2)}%)
+                  <span
+                    className={
+                      assetData.changePercent >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }
+                  >
+                    {assetData.changePercent >= 0 ? "+" : ""}
+                    {assetData.change.toFixed(2)} (
+                    {assetData.changePercent.toFixed(2)}%)
                   </span>
                 </div>
               </div>
@@ -676,24 +781,33 @@ export default function TradePage() {
 
           {/* Timeframe Selection */}
           <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
-            {['1m', '5m', '15m', '30m', '1h', '4h', '1D', '1W', '1M'].map(tf => (
-              <button
-                key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1.5 text-sm rounded whitespace-nowrap ${
-                  timeframe === tf 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                }`}
-              >
-                {tf}
-              </button>
-            ))}
+            {["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"].map(
+              (tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  className={`px-3 py-1.5 text-sm rounded whitespace-nowrap ${
+                    timeframe === tf
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                  }`}
+                >
+                  {tf}
+                </button>
+              ),
+            )}
           </div>
 
           {/* TradingView Chart */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden" style={{ height: '500px' }}>
-            <div id="tradingview_chart" ref={chartContainerRef} style={{ height: '100%' }}></div>
+          <div
+            className="bg-white rounded-lg shadow-sm overflow-hidden"
+            style={{ height: "500px" }}
+          >
+            <div
+              id="tradingview_chart"
+              ref={chartContainerRef}
+              style={{ height: "100%" }}
+            ></div>
           </div>
         </div>
 
@@ -701,14 +815,18 @@ export default function TradePage() {
         <div className="w-full lg:w-96 bg-white border-l border-gray-200 p-4 lg:p-6">
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 mb-6 border border-blue-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-blue-600 text-2xl">{getCurrencySymbol(profile.currency)}</span>
+              <span className="text-blue-600 text-2xl">
+                {getCurrencySymbol(profile.currency)}
+              </span>
               Place Trade
             </h3>
-            
+
             <div className="space-y-4">
               {/* Asset Display */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Asset
+                </label>
                 <div className="px-4 py-3 bg-white rounded-lg font-semibold text-gray-900 border border-gray-300">
                   {selectedAsset}
                 </div>
@@ -716,13 +834,33 @@ export default function TradePage() {
 
               {/* Price & Balance */}
               <div className="flex justify-between text-sm bg-white p-3 rounded-lg border border-gray-300">
-                <span className="text-gray-600">Price: <span className="font-semibold text-gray-900">${(livePrice > 0 ? livePrice : assetData.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></span>
-                <span className="text-gray-600">Balance: <span className="font-semibold text-green-600">{getCurrencySymbol(profile.currency)}{Number(profile.balance).toFixed(2)}</span></span>
+                <span className="text-gray-600">
+                  Price:{" "}
+                  <span className="font-semibold text-gray-900">
+                    $
+                    {(livePrice > 0
+                      ? livePrice
+                      : assetData.price
+                    ).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </span>
+                <span className="text-gray-600">
+                  Balance:{" "}
+                  <span className="font-semibold text-green-600">
+                    {getCurrencySymbol(profile.currency)}
+                    {Number(profile.balance).toFixed(2)}
+                  </span>
+                </span>
               </div>
 
               {/* Amount Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount
+                </label>
                 <div className="relative">
                   <input
                     type="number"
@@ -745,7 +883,7 @@ export default function TradePage() {
                   <Clock className="w-4 h-4 inline mr-1" />
                   Time Frame
                 </label>
-                <select 
+                <select
                   value={selectedTime}
                   onChange={(e) => setSelectedTime(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
@@ -763,8 +901,10 @@ export default function TradePage() {
 
               {/* Leverage */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Leverage</label>
-                <select 
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Leverage
+                </label>
+                <select
                   value={selectedLeverage}
                   onChange={(e) => setSelectedLeverage(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
@@ -780,8 +920,10 @@ export default function TradePage() {
 
               {/* Account Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-                <select 
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Account Type
+                </label>
+                <select
                   value={selectedAccount}
                   onChange={(e) => setSelectedAccount(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
@@ -795,14 +937,14 @@ export default function TradePage() {
               {/* Buy/Sell Buttons */}
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={() => handleTrade('buy')}
+                  onClick={() => handleTrade("buy")}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                 >
                   <TrendingUp className="w-5 h-5" />
                   BUY
                 </button>
                 <button
-                  onClick={() => handleTrade('sell')}
+                  onClick={() => handleTrade("sell")}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-lg font-bold text-lg transition-colors shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                 >
                   <TrendingDown className="w-5 h-5" />
@@ -816,20 +958,30 @@ export default function TradePage() {
           <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900">My Favorites</h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">view all</button>
+              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                view all
+              </button>
             </div>
             {favorites.length === 0 ? (
               <div className="text-center py-8">
                 <Star className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                 <p className="text-gray-500 text-sm">No Favorites added</p>
-                <p className="text-gray-400 text-xs mt-1">Click the star icon to add favorites</p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Click the star icon to add favorites
+                </p>
               </div>
             ) : (
               <div className="space-y-2">
-                {favorites.map(fav => (
-                  <div key={fav} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                {favorites.map((fav) => (
+                  <div
+                    key={fav}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
                     <span className="font-medium text-gray-900">{fav}</span>
-                    <Star className="w-4 h-4 text-yellow-500" fill="currentColor" />
+                    <Star
+                      className="w-4 h-4 text-yellow-500"
+                      fill="currentColor"
+                    />
                   </div>
                 ))}
               </div>
@@ -854,7 +1006,7 @@ export default function TradePage() {
         }
       `}</style>
     </div>
-  )
+  );
 }
 
 // Ticker Item Component
@@ -863,9 +1015,11 @@ function TickerItem({ label, value, change, percent, positive }) {
     <div className="flex items-center gap-2 whitespace-nowrap">
       <span className="text-gray-400">{label}</span>
       <span className="font-semibold">{value}</span>
-      <span className={`text-xs ${positive ? 'text-green-500' : 'text-red-500'}`}>
+      <span
+        className={`text-xs ${positive ? "text-green-500" : "text-red-500"}`}
+      >
         {change} ({percent})
       </span>
     </div>
-  )
+  );
 }
