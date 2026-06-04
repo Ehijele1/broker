@@ -147,11 +147,9 @@ export default function TradePage() {
   // Fetch real-time price data - UPDATED WITH COMMODITIES SUPPORT
   const fetchLivePrice = async () => {
     try {
-      let url = "";
-      let newPrice = null;
+      const finnhubKey = process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
 
       if (selectedMarket === "Crypto") {
-        // Use CoinGecko API for crypto prices
         const cryptoIds = {
           "BTC/USD": "bitcoin",
           "ETH/USD": "ethereum",
@@ -160,178 +158,80 @@ export default function TradePage() {
           "XRP/USD": "ripple",
         };
         const coinId = cryptoIds[selectedAsset];
-        if (coinId) {
-          url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`;
-          const response = await fetch(url);
-          const data = await response.json();
+        if (!coinId) return;
 
-          if (data[coinId]) {
-            newPrice = data[coinId].usd;
-            const change24h = data[coinId].usd_24h_change || 0;
+        const response = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`,
+        );
+        const data = await response.json();
 
-            // Update asset data with real values
-            setAssetData((prev) => ({
-              ...prev,
-              price: newPrice,
-              changePercent: change24h,
-              change: newPrice * (change24h / 100),
-              high: newPrice * 1.02,
-              low: newPrice * 0.98,
-            }));
-            setLivePrice(newPrice);
-          }
-        }
-      } else if (selectedMarket === "Commodities") {
-        // REAL-TIME COMMODITIES PRICES
-        // Using Metals-API for Gold & Silver (free tier)
-        // Alternative: CoinGecko also tracks gold/silver as commodities
-
-        if (selectedAsset === "XAU/USD" || selectedAsset === "XAG/USD") {
-          try {
-            // Use CoinGecko's commodities API (free, no API key needed)
-            const metalIds = {
-              "XAU/USD": "gold",
-              "XAG/USD": "silver",
-            };
-            const metalId = metalIds[selectedAsset];
-
-            if (metalId) {
-              url = `https://api.coingecko.com/api/v3/simple/price?ids=${metalId}&vs_currencies=usd&include_24hr_change=true`;
-              const response = await fetch(url);
-              const data = await response.json();
-
-              if (data[metalId]) {
-                // CoinGecko returns price per troy ounce
-                newPrice = data[metalId].usd;
-                const change24h = data[metalId].usd_24h_change || 0;
-
-                setAssetData((prev) => ({
-                  ...prev,
-                  price: newPrice,
-                  changePercent: change24h,
-                  change: newPrice * (change24h / 100),
-                  high: newPrice * 1.02,
-                  low: newPrice * 0.98,
-                  volume: "1.2M oz",
-                }));
-                setLivePrice(newPrice);
-              }
-            }
-          } catch (apiError) {
-            console.error("Commodities API error:", apiError);
-            // Fallback to small simulation if API fails
-            if (assetData.price > 0) {
-              const fluctuation =
-                (Math.random() - 0.5) * 0.002 * assetData.price;
-              newPrice = assetData.price + fluctuation;
-              setLivePrice(newPrice);
-            }
-          }
-        } else {
-          // For Oil (WTI, BRENT) - simulate until oil API is added
-          if (assetData.price > 0) {
-            const fluctuation = (Math.random() - 0.5) * 0.002 * assetData.price;
-            newPrice = assetData.price + fluctuation;
-            setLivePrice(newPrice);
-            setAssetData((prev) => ({
-              ...prev,
-              price: newPrice,
-            }));
-          }
-        }
-      } else if (selectedMarket === "Stock") {
-        // REAL-TIME STOCK PRICES
-        // Using Finnhub API (free tier) - get your free API key at https://finnhub.io
-        // Alternative: Yahoo Finance API, Alpha Vantage, Financial Modeling Prep
-
-        try {
-          // Finnhub free API key (demo key - replace with your own for production)
-          // Sign up at https://finnhub.io/register for free API key
-          const apiKey = "YOUR_FINNHUB_API_KEY"; // Replace with actual API key
-
-          // For demo purposes, using a public finance API (no key needed)
-          // This is Yahoo Finance alternative endpoint
-          url = `https://query1.finance.yahoo.com/v8/finance/chart/${selectedAsset}?interval=1m&range=1d`;
-
-          const response = await fetch(url);
-          const data = await response.json();
-
-          if (data.chart && data.chart.result && data.chart.result[0]) {
-            const result = data.chart.result[0];
-            const quote = result.meta;
-
-            if (quote.regularMarketPrice) {
-              newPrice = quote.regularMarketPrice;
-              const previousClose = quote.previousClose || newPrice;
-              const change = newPrice - previousClose;
-              const changePercent = (change / previousClose) * 100;
-
-              setAssetData((prev) => ({
-                ...prev,
-                price: newPrice,
-                changePercent: changePercent,
-                change: change,
-                high: quote.regularMarketDayHigh || newPrice * 1.02,
-                low: quote.regularMarketDayLow || newPrice * 0.98,
-                volume: quote.regularMarketVolume
-                  ? (quote.regularMarketVolume / 1000000).toFixed(2) + "M"
-                  : "0",
-              }));
-              setLivePrice(newPrice);
-            }
-          } else {
-            throw new Error("Invalid response from stock API");
-          }
-        } catch (apiError) {
-          console.error("Stock API error:", apiError);
-          // Fallback to small simulation if API fails
-          if (assetData.price > 0) {
-            const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price;
-            newPrice = assetData.price + fluctuation;
-            setLivePrice(newPrice);
-            setAssetData((prev) => ({
-              ...prev,
-              price: newPrice,
-            }));
-          }
-        }
-      } else if (selectedMarket === "Forex") {
-        // For forex, use exchange rate API
-        const pairs = selectedAsset.split("/");
-        if (pairs.length === 2) {
-          url = `https://api.exchangerate-api.com/v4/latest/${pairs[0]}`;
-          const response = await fetch(url);
-          const data = await response.json();
-
-          if (data.rates && data.rates[pairs[1]]) {
-            newPrice = data.rates[pairs[1]];
-            setLivePrice(newPrice);
-            setAssetData((prev) => ({
-              ...prev,
-              price: newPrice,
-            }));
-          }
-        }
-      } else if (selectedMarket === "Indices") {
-        // For indices, simulate small changes
-        if (assetData.price > 0) {
-          const fluctuation = (Math.random() - 0.5) * 0.003 * assetData.price;
-          newPrice = assetData.price + fluctuation;
+        if (data[coinId]) {
+          const newPrice = data[coinId].usd;
+          const change24h = data[coinId].usd_24h_change || 0;
           setLivePrice(newPrice);
           setAssetData((prev) => ({
             ...prev,
             price: newPrice,
+            changePercent: change24h,
+            change: newPrice * (change24h / 100),
+            high: newPrice * 1.02,
+            low: newPrice * 0.98,
+          }));
+        }
+      } else if (selectedMarket === "Forex") {
+        const symbol = selectedAsset.replace("/", "");
+        const response = await fetch(
+          `https://finnhub.io/api/v1/forex/candle?symbol=OANDA:${symbol}&resolution=1&count=1&token=${finnhubKey}`,
+        );
+        const data = await response.json();
+
+        if (data.c && data.c.length > 0) {
+          const newPrice = data.c[data.c.length - 1];
+          setLivePrice(newPrice);
+          setAssetData((prev) => ({
+            ...prev,
+            price: newPrice,
+            high: data.h[data.h.length - 1],
+            low: data.l[data.l.length - 1],
+          }));
+        }
+      } else {
+        // Stocks, Commodities, Indices — all use Finnhub quote
+        const symbolMap = {
+          "XAU/USD": "OANDA:XAU_USD",
+          "XAG/USD": "OANDA:XAG_USD",
+          WTI: "OANDA:WTICO_USD",
+          BRENT: "OANDA:BCO_USD",
+          SPX: "OANDA:SPX500_USD",
+          NDX: "OANDA:NAS100_USD",
+          DJI: "OANDA:US30_USD",
+          DAX: "OANDA:DE30_EUR",
+          FTSE: "OANDA:UK100_GBP",
+        };
+        const symbol = symbolMap[selectedAsset] || selectedAsset;
+
+        const response = await fetch(
+          `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`,
+        );
+        const data = await response.json();
+
+        if (data.c && data.c > 0) {
+          const newPrice = data.c;
+          const change = data.d || 0;
+          const changePercent = data.dp || 0;
+          setLivePrice(newPrice);
+          setAssetData((prev) => ({
+            ...prev,
+            price: newPrice,
+            change: change,
+            changePercent: changePercent,
+            high: data.h || newPrice * 1.02,
+            low: data.l || newPrice * 0.98,
           }));
         }
       }
     } catch (error) {
       console.error("Error fetching live price:", error);
-      // Fallback to simulation on error
-      if (assetData.price > 0) {
-        const fluctuation = (Math.random() - 0.5) * 0.005 * assetData.price;
-        const newPrice = assetData.price + fluctuation;
-        setLivePrice(newPrice);
-      }
     }
   };
 
@@ -340,46 +240,54 @@ export default function TradePage() {
     fetchLivePrice();
 
     // Then fetch every 3 seconds for real-time updates
-    const priceInterval = setInterval(fetchLivePrice, 3000);
+    const priceInterval = setInterval(fetchLivePrice, 15000);
 
     return () => clearInterval(priceInterval);
   }, [selectedAsset, selectedMarket]);
 
   useEffect(() => {
-    // Load TradingView widget
-    if (chartContainerRef.current && typeof window !== "undefined") {
-      const script = document.createElement("script");
-      script.src = "https://s3.tradingview.com/tv.js";
-      script.async = true;
-      script.onload = () => {
-        if (window.TradingView) {
-          new window.TradingView.widget({
-            autosize: true,
-            symbol: getSymbolForChart(),
-            interval: "D",
-            timezone: "Etc/UTC",
-            theme: "light",
-            style: "1",
-            locale: "en",
-            toolbar_bg: "#f1f3f6",
-            enable_publishing: false,
-            hide_side_toolbar: false,
-            allow_symbol_change: true,
-            container_id: "tradingview_chart",
-            studies: ["MASimple@tv-basicstudies"],
-            disabled_features: ["use_localstorage_for_settings"],
-          });
-        }
-      };
-      document.head.appendChild(script);
+    if (typeof window === "undefined" || !chartContainerRef.current) return;
 
-      return () => {
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
-      };
+    const containerId = "tradingview_chart";
+
+    const createWidget = () => {
+      if (window.TradingView) {
+        chartContainerRef.current.innerHTML = "";
+        new window.TradingView.widget({
+          autosize: true,
+          symbol: getSymbolForChart(),
+          interval: "D",
+          timezone: "Etc/UTC",
+          theme: isDarkMode ? "dark" : "light",
+          style: "1",
+          locale: "en",
+          toolbar_bg: "#f1f3f6",
+          enable_publishing: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: true,
+          container_id: containerId,
+          studies: ["MASimple@tv-basicstudies"],
+          disabled_features: ["use_localstorage_for_settings"],
+        });
+      }
+    };
+
+    if (window.TradingView) {
+      createWidget();
+    } else {
+      const existingScript = document.getElementById("tradingview-script");
+      if (!existingScript) {
+        const script = document.createElement("script");
+        script.id = "tradingview-script";
+        script.src = "https://s3.tradingview.com/tv.js";
+        script.async = true;
+        script.onload = createWidget;
+        document.head.appendChild(script);
+      } else {
+        existingScript.addEventListener("load", createWidget);
+      }
     }
-  }, [selectedAsset, selectedMarket]);
+  }, [selectedAsset, selectedMarket, isDarkMode]);
 
   const getSymbolForChart = () => {
     if (selectedMarket === "Stock") {
