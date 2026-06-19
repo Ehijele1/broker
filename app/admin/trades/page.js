@@ -125,6 +125,15 @@ export default function AdminTrades() {
 
       let newBalance = Number(user.balance);
 
+      // If trade was already closed before, reverse the previous payout first
+      if (
+        selectedTrade.status === "completed" &&
+        selectedTrade.profit_loss_amount != null
+      ) {
+        const prevPayout = staked + Number(selectedTrade.profit_loss_amount);
+        newBalance -= prevPayout;
+      }
+
       if (outcome === "profit") {
         newBalance += staked + pl;
       } else {
