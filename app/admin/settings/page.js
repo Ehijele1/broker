@@ -1,321 +1,332 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { 
-  Bitcoin, Building2, Plus, Edit, Trash2, Save, X,
-  CheckCircle, AlertCircle, Upload, Image as ImageIcon, Eye
-} from 'lucide-react'
+"use client";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import {
+  Bitcoin,
+  Building2,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Upload,
+  Image as ImageIcon,
+  Eye,
+} from "lucide-react";
 
 export default function AdminSettings() {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState('crypto')
-  const [cryptoAddresses, setCryptoAddresses] = useState([])
-  const [bankAccounts, setBankAccounts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("crypto");
+  const [cryptoAddresses, setCryptoAddresses] = useState([]);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   // Crypto form state
-  const [showCryptoForm, setShowCryptoForm] = useState(false)
-  const [editingCrypto, setEditingCrypto] = useState(null)
+  const [showCryptoForm, setShowCryptoForm] = useState(false);
+  const [editingCrypto, setEditingCrypto] = useState(null);
   const [cryptoForm, setCryptoForm] = useState({
-    name: '',
-    network: '',
-    address: '',
-    min_amount: '',
-    color: 'text-orange-500',
+    name: "",
+    network: "",
+    address: "",
+    min_amount: "",
+    color: "text-orange-500",
     is_active: true,
-    qr_code_url: ''
-  })
-  const [qrCodeFile, setQrCodeFile] = useState(null)
-  const [qrCodePreview, setQrCodePreview] = useState(null)
-  const [uploadingQR, setUploadingQR] = useState(false)
+    qr_code_url: "",
+  });
+  const [qrCodeFile, setQrCodeFile] = useState(null);
+  const [qrCodePreview, setQrCodePreview] = useState(null);
+  const [uploadingQR, setUploadingQR] = useState(false);
 
   // Bank form state
-  const [showBankForm, setShowBankForm] = useState(false)
-  const [editingBank, setEditingBank] = useState(null)
+  const [showBankForm, setShowBankForm] = useState(false);
+  const [editingBank, setEditingBank] = useState(null);
   const [bankForm, setBankForm] = useState({
-    bank_name: '',
-    account_name: '',
-    account_number: '',
-    swift_code: '',
-    routing_number: '',
-    is_active: true
-  })
+    bank_name: "",
+    account_name: "",
+    account_number: "",
+    swift_code: "",
+    routing_number: "",
+    is_active: true,
+  });
 
-  const [successMessage, setSuccessMessage] = useState('')
-  const [showQRModal, setShowQRModal] = useState(false)
-  const [selectedQRImage, setSelectedQRImage] = useState(null)
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedQRImage, setSelectedQRImage] = useState(null);
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
     try {
       // Fetch crypto addresses
       const { data: cryptoData, error: cryptoError } = await supabase
-        .from('crypto_addresses')
-        .select('*')
-        .order('created_at', { ascending: true })
+        .from("crypto_addresses")
+        .select("*")
+        .order("created_at", { ascending: true });
 
-      if (cryptoError) throw cryptoError
-      setCryptoAddresses(cryptoData || [])
+      if (cryptoError) throw cryptoError;
+      setCryptoAddresses(cryptoData || []);
 
       // Fetch bank accounts
       const { data: bankData, error: bankError } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .order('created_at', { ascending: true })
+        .from("bank_accounts")
+        .select("*")
+        .order("created_at", { ascending: true });
 
-      if (bankError) throw bankError
-      setBankAccounts(bankData || [])
+      if (bankError) throw bankError;
+      setBankAccounts(bankData || []);
     } catch (error) {
-      console.error('Error fetching data:', error)
+      console.error("Error fetching data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleQRCodeChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0];
+    if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file')
-      return
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
+      return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert('QR code image must be less than 2MB')
-      return
+      alert("QR code image must be less than 2MB");
+      return;
     }
 
-    setQrCodeFile(file)
-    
+    setQrCodeFile(file);
+
     // Create preview
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onloadend = () => {
-      setQrCodePreview(reader.result)
-    }
-    reader.readAsDataURL(file)
-  }
+      setQrCodePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const uploadQRCode = async () => {
-    if (!qrCodeFile) return null
+    if (!qrCodeFile) return null;
 
     try {
-      setUploadingQR(true)
+      setUploadingQR(true);
 
-      const fileExt = qrCodeFile.name.split('.').pop()
-      const fileName = `qr_${Date.now()}.${fileExt}`
-      const filePath = `crypto-qr-codes/${fileName}`
+      const fileExt = qrCodeFile.name.split(".").pop();
+      const fileName = `qr_${Date.now()}.${fileExt}`;
+      const filePath = `crypto-qr-codes/${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('payment-qr-codes')
+        .from("payment-qr-codes")
         .upload(filePath, qrCodeFile, {
-          cacheControl: '3600',
-          upsert: true
-        })
+          cacheControl: "3600",
+          upsert: true,
+        });
 
-      if (uploadError) throw uploadError
+      if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('payment-qr-codes')
-        .getPublicUrl(filePath)
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("payment-qr-codes").getPublicUrl(filePath);
 
-      return publicUrl
+      return publicUrl;
     } catch (error) {
-      console.error('Error uploading QR code:', error)
-      throw error
+      console.error("Error uploading QR code:", error);
+      throw error;
     } finally {
-      setUploadingQR(false)
+      setUploadingQR(false);
     }
-  }
+  };
 
   const removeQRCode = () => {
-    setQrCodeFile(null)
-    setQrCodePreview(null)
-  }
+    setQrCodeFile(null);
+    setQrCodePreview(null);
+  };
 
   const handleSaveCrypto = async (e) => {
-    e.preventDefault()
-    setSaving(true)
+    e.preventDefault();
+    setSaving(true);
 
     try {
-      let qrCodeUrl = cryptoForm.qr_code_url
+      let qrCodeUrl = cryptoForm.qr_code_url;
 
       // Upload new QR code if file is selected
       if (qrCodeFile) {
-        qrCodeUrl = await uploadQRCode()
+        qrCodeUrl = await uploadQRCode();
       }
 
       const dataToSave = {
         ...cryptoForm,
-        qr_code_url: qrCodeUrl
-      }
+        qr_code_url: qrCodeUrl,
+      };
 
       if (editingCrypto) {
         // Update existing
         const { error } = await supabase
-          .from('crypto_addresses')
+          .from("crypto_addresses")
           .update(dataToSave)
-          .eq('id', editingCrypto.id)
+          .eq("id", editingCrypto.id);
 
-        if (error) throw error
-        showSuccess('Crypto address updated successfully')
+        if (error) throw error;
+        showSuccess("Crypto address updated successfully");
       } else {
         // Create new
         const { error } = await supabase
-          .from('crypto_addresses')
-          .insert([dataToSave])
+          .from("crypto_addresses")
+          .insert([dataToSave]);
 
-        if (error) throw error
-        showSuccess('Crypto address added successfully')
+        if (error) throw error;
+        showSuccess("Crypto address added successfully");
       }
 
-      resetCryptoForm()
-      fetchData()
+      resetCryptoForm();
+      fetchData();
     } catch (error) {
-      console.error('Error saving crypto address:', error)
-      alert('Failed to save crypto address: ' + error.message)
+      console.error("Error saving crypto address:", error);
+      alert("Failed to save crypto address: " + error.message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleSaveBank = async (e) => {
-    e.preventDefault()
-    setSaving(true)
+    e.preventDefault();
+    setSaving(true);
 
     try {
       if (editingBank) {
         // Update existing
         const { error } = await supabase
-          .from('bank_accounts')
+          .from("bank_accounts")
           .update(bankForm)
-          .eq('id', editingBank.id)
+          .eq("id", editingBank.id);
 
-        if (error) throw error
-        showSuccess('Bank account updated successfully')
+        if (error) throw error;
+        showSuccess("Bank account updated successfully");
       } else {
         // Create new
         const { error } = await supabase
-          .from('bank_accounts')
-          .insert([bankForm])
+          .from("bank_accounts")
+          .insert([bankForm]);
 
-        if (error) throw error
-        showSuccess('Bank account added successfully')
+        if (error) throw error;
+        showSuccess("Bank account added successfully");
       }
 
-      resetBankForm()
-      fetchData()
+      resetBankForm();
+      fetchData();
     } catch (error) {
-      console.error('Error saving bank account:', error)
-      alert('Failed to save bank account')
+      console.error("Error saving bank account:", error);
+      alert("Failed to save bank account");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleDeleteCrypto = async (id) => {
-    if (!confirm('Are you sure you want to delete this crypto address?')) return
+    if (!confirm("Are you sure you want to delete this crypto address?"))
+      return;
 
     try {
       const { error } = await supabase
-        .from('crypto_addresses')
+        .from("crypto_addresses")
         .delete()
-        .eq('id', id)
+        .eq("id", id);
 
-      if (error) throw error
-      showSuccess('Crypto address deleted')
-      fetchData()
+      if (error) throw error;
+      showSuccess("Crypto address deleted");
+      fetchData();
     } catch (error) {
-      console.error('Error deleting crypto address:', error)
-      alert('Failed to delete crypto address')
+      console.error("Error deleting crypto address:", error);
+      alert("Failed to delete crypto address");
     }
-  }
+  };
 
   const handleDeleteBank = async (id) => {
-    if (!confirm('Are you sure you want to delete this bank account?')) return
+    if (!confirm("Are you sure you want to delete this bank account?")) return;
 
     try {
       const { error } = await supabase
-        .from('bank_accounts')
+        .from("bank_accounts")
         .delete()
-        .eq('id', id)
+        .eq("id", id);
 
-      if (error) throw error
-      showSuccess('Bank account deleted')
-      fetchData()
+      if (error) throw error;
+      showSuccess("Bank account deleted");
+      fetchData();
     } catch (error) {
-      console.error('Error deleting bank account:', error)
-      alert('Failed to delete bank account')
+      console.error("Error deleting bank account:", error);
+      alert("Failed to delete bank account");
     }
-  }
+  };
 
   const editCrypto = (crypto) => {
-    setEditingCrypto(crypto)
-    setCryptoForm(crypto)
+    setEditingCrypto(crypto);
+    setCryptoForm(crypto);
     if (crypto.qr_code_url) {
-      setQrCodePreview(crypto.qr_code_url)
+      setQrCodePreview(crypto.qr_code_url);
     }
-    setShowCryptoForm(true)
-  }
+    setShowCryptoForm(true);
+  };
 
   const editBank = (bank) => {
-    setEditingBank(bank)
-    setBankForm(bank)
-    setShowBankForm(true)
-  }
+    setEditingBank(bank);
+    setBankForm(bank);
+    setShowBankForm(true);
+  };
 
   const resetCryptoForm = () => {
     setCryptoForm({
-      name: '',
-      network: '',
-      address: '',
-      min_amount: '',
-      color: 'text-orange-500',
+      name: "",
+      network: "",
+      address: "",
+      min_amount: "",
+      color: "text-orange-500",
       is_active: true,
-      qr_code_url: ''
-    })
-    setQrCodeFile(null)
-    setQrCodePreview(null)
-    setEditingCrypto(null)
-    setShowCryptoForm(false)
-  }
+      qr_code_url: "",
+    });
+    setQrCodeFile(null);
+    setQrCodePreview(null);
+    setEditingCrypto(null);
+    setShowCryptoForm(false);
+  };
 
   const resetBankForm = () => {
     setBankForm({
-      bank_name: '',
-      account_name: '',
-      account_number: '',
-      swift_code: '',
-      routing_number: '',
-      is_active: true
-    })
-    setEditingBank(null)
-    setShowBankForm(false)
-  }
+      bank_name: "",
+      account_name: "",
+      account_number: "",
+      swift_code: "",
+      routing_number: "",
+      is_active: true,
+    });
+    setEditingBank(null);
+    setShowBankForm(false);
+  };
 
   const showSuccess = (message) => {
-    setSuccessMessage(message)
-    setTimeout(() => setSuccessMessage(''), 3000)
-  }
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(""), 3000);
+  };
 
   const viewQRCode = (url) => {
-    setSelectedQRImage(url)
-    setShowQRModal(true)
-  }
+    setSelectedQRImage(url);
+    setShowQRModal(true);
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -334,8 +345,8 @@ export default function AdminSettings() {
           <div className="relative max-w-lg w-full bg-slate-900 rounded-2xl p-6 border border-purple-800/50">
             <button
               onClick={() => {
-                setShowQRModal(false)
-                setSelectedQRImage(null)
+                setShowQRModal(false);
+                setSelectedQRImage(null);
               }}
               className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors"
             >
@@ -358,33 +369,32 @@ export default function AdminSettings() {
           <p className="text-slate-400">Manage payment methods and details</p>
         </div>
         <button
-            onClick={() => router.push('/admin/dashboard')}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            Dashboard
-          </button>
+          onClick={() => router.push("/admin/dashboard")}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+        >
+          Dashboard
+        </button>
       </div>
-      
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-slate-800">
         <button
-          onClick={() => setActiveTab('crypto')}
+          onClick={() => setActiveTab("crypto")}
           className={`px-6 py-3 font-semibold transition-colors ${
-            activeTab === 'crypto'
-              ? 'text-purple-400 border-b-2 border-purple-400'
-              : 'text-slate-400 hover:text-white'
+            activeTab === "crypto"
+              ? "text-purple-400 border-b-2 border-purple-400"
+              : "text-slate-400 hover:text-white"
           }`}
         >
           <Bitcoin className="w-5 h-5 inline mr-2" />
           Crypto Addresses
         </button>
         <button
-          onClick={() => setActiveTab('bank')}
+          onClick={() => setActiveTab("bank")}
           className={`px-6 py-3 font-semibold transition-colors ${
-            activeTab === 'bank'
-              ? 'text-purple-400 border-b-2 border-purple-400'
-              : 'text-slate-400 hover:text-white'
+            activeTab === "bank"
+              ? "text-purple-400 border-b-2 border-purple-400"
+              : "text-slate-400 hover:text-white"
           }`}
         >
           <Building2 className="w-5 h-5 inline mr-2" />
@@ -393,7 +403,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Crypto Tab */}
-      {activeTab === 'crypto' && (
+      {activeTab === "crypto" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Cryptocurrency Addresses</h2>
@@ -410,59 +420,90 @@ export default function AdminSettings() {
           {showCryptoForm && (
             <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-800/50">
               <h3 className="text-lg font-bold mb-4">
-                {editingCrypto ? 'Edit Crypto Address' : 'Add New Crypto Address'}
+                {editingCrypto
+                  ? "Edit Crypto Address"
+                  : "Add New Crypto Address"}
               </h3>
               <form onSubmit={handleSaveCrypto} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Cryptocurrency Name</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Cryptocurrency Name
+                    </label>
                     <input
                       type="text"
                       value={cryptoForm.name}
-                      onChange={(e) => setCryptoForm({...cryptoForm, name: e.target.value})}
+                      onChange={(e) =>
+                        setCryptoForm({ ...cryptoForm, name: e.target.value })
+                      }
                       placeholder="e.g., Bitcoin (BTC)"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Network</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Network
+                    </label>
                     <input
                       type="text"
                       value={cryptoForm.network}
-                      onChange={(e) => setCryptoForm({...cryptoForm, network: e.target.value})}
+                      onChange={(e) =>
+                        setCryptoForm({
+                          ...cryptoForm,
+                          network: e.target.value,
+                        })
+                      }
                       placeholder="e.g., BTC, ERC20, TRC20"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-2">Wallet Address</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Wallet Address
+                    </label>
                     <input
                       type="text"
                       value={cryptoForm.address}
-                      onChange={(e) => setCryptoForm({...cryptoForm, address: e.target.value})}
+                      onChange={(e) =>
+                        setCryptoForm({
+                          ...cryptoForm,
+                          address: e.target.value,
+                        })
+                      }
                       placeholder="Enter wallet address"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white font-mono text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Minimum Amount</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Minimum Amount
+                    </label>
                     <input
                       type="number"
                       step="0.01"
                       value={cryptoForm.min_amount}
-                      onChange={(e) => setCryptoForm({...cryptoForm, min_amount: e.target.value})}
+                      onChange={(e) =>
+                        setCryptoForm({
+                          ...cryptoForm,
+                          min_amount: e.target.value,
+                        })
+                      }
                       placeholder="e.g., 0.001"
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Color Class</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Color Class
+                    </label>
                     <select
                       value={cryptoForm.color}
-                      onChange={(e) => setCryptoForm({...cryptoForm, color: e.target.value})}
+                      onChange={(e) =>
+                        setCryptoForm({ ...cryptoForm, color: e.target.value })
+                      }
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     >
                       <option value="text-orange-500">Orange (Bitcoin)</option>
@@ -475,9 +516,10 @@ export default function AdminSettings() {
                   {/* QR Code Upload */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-2">
-                      QR Code <span className="text-xs text-slate-400">(Optional)</span>
+                      QR Code{" "}
+                      <span className="text-xs text-slate-400">(Optional)</span>
                     </label>
-                    
+
                     {qrCodePreview ? (
                       <div className="relative">
                         <img
@@ -509,8 +551,12 @@ export default function AdminSettings() {
                     ) : (
                       <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
                         <ImageIcon className="w-12 h-12 text-slate-500 mb-2" />
-                        <p className="text-sm text-slate-400">Click to upload QR code</p>
-                        <p className="text-xs text-slate-500 mt-1">PNG, JPG up to 2MB</p>
+                        <p className="text-sm text-slate-400">
+                          Click to upload QR code
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          PNG, JPG up to 2MB
+                        </p>
                         <input
                           type="file"
                           accept="image/*"
@@ -520,7 +566,8 @@ export default function AdminSettings() {
                       </label>
                     )}
                     <p className="text-xs text-slate-400 mt-2">
-                      Upload a QR code image for this wallet address to make it easier for users to scan
+                      Upload a QR code image for this wallet address to make it
+                      easier for users to scan
                     </p>
                   </div>
 
@@ -529,10 +576,17 @@ export default function AdminSettings() {
                       <input
                         type="checkbox"
                         checked={cryptoForm.is_active}
-                        onChange={(e) => setCryptoForm({...cryptoForm, is_active: e.target.checked})}
+                        onChange={(e) =>
+                          setCryptoForm({
+                            ...cryptoForm,
+                            is_active: e.target.checked,
+                          })
+                        }
                         className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-purple-600 focus:ring-purple-500"
                       />
-                      <span className="text-sm font-medium">Active (visible to users)</span>
+                      <span className="text-sm font-medium">
+                        Active (visible to users)
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -549,10 +603,10 @@ export default function AdminSettings() {
                     disabled={saving || uploadingQR}
                     className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold disabled:opacity-50 flex items-center gap-2"
                   >
-                    {(saving || uploadingQR) ? (
+                    {saving || uploadingQR ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        {uploadingQR ? 'Uploading QR...' : 'Saving...'}
+                        {uploadingQR ? "Uploading QR..." : "Saving..."}
                       </>
                     ) : (
                       <>
@@ -575,10 +629,15 @@ export default function AdminSettings() {
               </div>
             ) : (
               cryptoAddresses.map((crypto) => (
-                <div key={crypto.id} className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 border border-slate-800">
+                <div
+                  key={crypto.id}
+                  className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 border border-slate-800"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className={`font-bold text-lg ${crypto.color}`}>{crypto.name}</h3>
+                      <h3 className={`font-bold text-lg ${crypto.color}`}>
+                        {crypto.name}
+                      </h3>
                       <p className="text-sm text-slate-400">{crypto.network}</p>
                     </div>
                     <div className="flex gap-2">
@@ -626,16 +685,20 @@ export default function AdminSettings() {
                     {crypto.min_amount && (
                       <div>
                         <p className="text-xs text-slate-400">Minimum Amount</p>
-                        <p className="text-sm font-semibold">{crypto.min_amount}</p>
+                        <p className="text-sm font-semibold">
+                          {crypto.min_amount}
+                        </p>
                       </div>
                     )}
                     <div>
-                      <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                        crypto.is_active
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-slate-700 text-slate-400'
-                      }`}>
-                        {crypto.is_active ? 'Active' : 'Inactive'}
+                      <span
+                        className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                          crypto.is_active
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-slate-700 text-slate-400"
+                        }`}
+                      >
+                        {crypto.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
                   </div>
@@ -647,7 +710,7 @@ export default function AdminSettings() {
       )}
 
       {/* Bank Tab - Keep the same as before */}
-      {activeTab === 'bank' && (
+      {activeTab === "bank" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Bank Accounts</h2>
@@ -664,59 +727,88 @@ export default function AdminSettings() {
           {showBankForm && (
             <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-purple-800/50">
               <h3 className="text-lg font-bold mb-4">
-                {editingBank ? 'Edit Bank Account' : 'Add New Bank Account'}
+                {editingBank ? "Edit Bank Account" : "Add New Bank Account"}
               </h3>
               <form onSubmit={handleSaveBank} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Bank Name</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Bank Name
+                    </label>
                     <input
                       type="text"
                       value={bankForm.bank_name}
-                      onChange={(e) => setBankForm({...bankForm, bank_name: e.target.value})}
+                      onChange={(e) =>
+                        setBankForm({ ...bankForm, bank_name: e.target.value })
+                      }
                       placeholder="e.g., Chase Bank"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Account Name</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Account Name
+                    </label>
                     <input
                       type="text"
                       value={bankForm.account_name}
-                      onChange={(e) => setBankForm({...bankForm, account_name: e.target.value})}
+                      onChange={(e) =>
+                        setBankForm({
+                          ...bankForm,
+                          account_name: e.target.value,
+                        })
+                      }
                       placeholder="e.g., SecureProTrading LLC"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Account Number</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Account Number
+                    </label>
                     <input
                       type="text"
                       value={bankForm.account_number}
-                      onChange={(e) => setBankForm({...bankForm, account_number: e.target.value})}
+                      onChange={(e) =>
+                        setBankForm({
+                          ...bankForm,
+                          account_number: e.target.value,
+                        })
+                      }
                       placeholder="Enter account number"
                       required
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">SWIFT/BIC Code</label>
+                    <label className="block text-sm font-medium mb-2">
+                      SWIFT/BIC Code
+                    </label>
                     <input
                       type="text"
                       value={bankForm.swift_code}
-                      onChange={(e) => setBankForm({...bankForm, swift_code: e.target.value})}
+                      onChange={(e) =>
+                        setBankForm({ ...bankForm, swift_code: e.target.value })
+                      }
                       placeholder="Optional"
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Routing Number</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Routing Number
+                    </label>
                     <input
                       type="text"
                       value={bankForm.routing_number}
-                      onChange={(e) => setBankForm({...bankForm, routing_number: e.target.value})}
+                      onChange={(e) =>
+                        setBankForm({
+                          ...bankForm,
+                          routing_number: e.target.value,
+                        })
+                      }
                       placeholder="Optional"
                       className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                     />
@@ -726,10 +818,17 @@ export default function AdminSettings() {
                       <input
                         type="checkbox"
                         checked={bankForm.is_active}
-                        onChange={(e) => setBankForm({...bankForm, is_active: e.target.checked})}
+                        onChange={(e) =>
+                          setBankForm({
+                            ...bankForm,
+                            is_active: e.target.checked,
+                          })
+                        }
                         className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-purple-600 focus:ring-purple-500"
                       />
-                      <span className="text-sm font-medium">Active (visible to users)</span>
+                      <span className="text-sm font-medium">
+                        Active (visible to users)
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -772,11 +871,16 @@ export default function AdminSettings() {
               </div>
             ) : (
               bankAccounts.map((bank) => (
-                <div key={bank.id} className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 border border-slate-800">
+                <div
+                  key={bank.id}
+                  className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 border border-slate-800"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="font-bold text-lg">{bank.bank_name}</h3>
-                      <p className="text-sm text-slate-400">{bank.account_name}</p>
+                      <p className="text-sm text-slate-400">
+                        {bank.account_name}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -811,12 +915,14 @@ export default function AdminSettings() {
                       </div>
                     )}
                     <div>
-                      <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                        bank.is_active
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-slate-700 text-slate-400'
-                      }`}>
-                        {bank.is_active ? 'Active' : 'Inactive'}
+                      <span
+                        className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                          bank.is_active
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-slate-700 text-slate-400"
+                        }`}
+                      >
+                        {bank.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
                   </div>
@@ -843,5 +949,5 @@ export default function AdminSettings() {
         }
       `}</style>
     </div>
-  )
+  );
 }

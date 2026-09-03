@@ -1,83 +1,100 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { 
-  Search, Filter, Edit, Trash2, UserPlus, Download, 
-  ChevronDown, MoreVertical, DollarSign, Mail, Phone,
-  MapPin, Calendar, Shield, User
-} from 'lucide-react'
+"use client";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  UserPlus,
+  Download,
+  ChevronDown,
+  MoreVertical,
+  DollarSign,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Shield,
+  User,
+} from "lucide-react";
 
 export default function UserManagement() {
-  const router = useRouter()
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterRole, setFilterRole] = useState('all')
-  const [selectedUsers, setSelectedUsers] = useState([])
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
+  const router = useRouter();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState("all");
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (error) throw error
+      if (error) throw error;
 
-      setUsers(data || [])
+      setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error)
+      console.error("Error fetching users:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
       user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.username?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesFilter = filterRole === 'all' || user.role === filterRole
+      user.username?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesSearch && matchesFilter
-  })
+    const matchesFilter = filterRole === "all" || user.role === filterRole;
+
+    return matchesSearch && matchesFilter;
+  });
 
   const handleDeleteUser = async (userId, userName) => {
-    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) return
+    if (
+      !confirm(
+        `Are you sure you want to delete ${userName}? This action cannot be undone.`,
+      )
+    )
+      return;
 
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .delete()
-        .eq('id', userId)
+        .eq("id", userId);
 
-      if (error) throw error
+      if (error) throw error;
 
-      alert('User deleted successfully')
-      fetchUsers()
+      alert("User deleted successfully");
+      fetchUsers();
     } catch (error) {
-      console.error('Error deleting user:', error)
-      alert('Failed to delete user: ' + error.message)
+      console.error("Error deleting user:", error);
+      alert("Failed to delete user: " + error.message);
     }
-  }
+  };
 
   const handleEditUser = (user) => {
-    setEditingUser(user)
-    setShowEditModal(true)
-  }
+    setEditingUser(user);
+    setShowEditModal(true);
+  };
 
   const handleUpdateUser = async () => {
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           full_name: editingUser.full_name,
           username: editingUser.username,
@@ -86,25 +103,34 @@ export default function UserManagement() {
           country: editingUser.country,
           currency: editingUser.currency,
           balance: editingUser.balance,
-          role: editingUser.role
+          role: editingUser.role,
         })
-        .eq('id', editingUser.id)
+        .eq("id", editingUser.id);
 
-      if (error) throw error
+      if (error) throw error;
 
-      alert('User updated successfully')
-      setShowEditModal(false)
-      fetchUsers()
+      alert("User updated successfully");
+      setShowEditModal(false);
+      fetchUsers();
     } catch (error) {
-      console.error('Error updating user:', error)
-      alert('Failed to update user: ' + error.message)
+      console.error("Error updating user:", error);
+      alert("Failed to update user: " + error.message);
     }
-  }
+  };
 
   const handleExportUsers = () => {
     const csv = [
-      ['Name', 'Username', 'Email', 'Country', 'Currency', 'Balance', 'Role', 'Created At'],
-      ...filteredUsers.map(u => [
+      [
+        "Name",
+        "Username",
+        "Email",
+        "Country",
+        "Currency",
+        "Balance",
+        "Role",
+        "Created At",
+      ],
+      ...filteredUsers.map((u) => [
         u.full_name,
         u.username,
         u.email,
@@ -112,24 +138,26 @@ export default function UserManagement() {
         u.currency,
         u.balance,
         u.role,
-        new Date(u.created_at).toLocaleDateString()
-      ])
-    ].map(row => row.join(',')).join('\n')
+        new Date(u.created_at).toLocaleDateString(),
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `users-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-  }
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `users-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -142,7 +170,7 @@ export default function UserManagement() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => router.push('/admin/dashboard')}
+            onClick={() => router.push("/admin/dashboard")}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
           >
             Dashboard
@@ -155,7 +183,7 @@ export default function UserManagement() {
             Export
           </button>
           <button
-            onClick={() => router.push('/admin/users/new')}
+            onClick={() => router.push("/admin/users/new")}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors font-semibold"
           >
             <UserPlus className="w-4 h-4" />
@@ -166,31 +194,36 @@ export default function UserManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatBox 
-          label="Total Users" 
-          value={users.filter(u => u.role === 'user').length} 
+        <StatBox
+          label="Total Users"
+          value={users.filter((u) => u.role === "user").length}
           icon={<User className="w-5 h-5" />}
           color="blue"
         />
-        <StatBox 
-          label="Administrators" 
-          value={users.filter(u => u.role === 'admin').length} 
+        <StatBox
+          label="Administrators"
+          value={users.filter((u) => u.role === "admin").length}
           icon={<Shield className="w-5 h-5" />}
           color="purple"
         />
-        <StatBox 
-          label="Total Balance" 
-          value={`$${users.reduce((sum, u) => sum + Number(u.balance || 0), 0).toFixed(2)}`} 
+        <StatBox
+          label="Total Balance"
+          value={`$${users.reduce((sum, u) => sum + Number(u.balance || 0), 0).toFixed(2)}`}
           icon={<DollarSign className="w-5 h-5" />}
           color="green"
         />
-        <StatBox 
-          label="New This Month" 
-          value={users.filter(u => {
-            const created = new Date(u.created_at)
-            const now = new Date()
-            return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear()
-          }).length}
+        <StatBox
+          label="New This Month"
+          value={
+            users.filter((u) => {
+              const created = new Date(u.created_at);
+              const now = new Date();
+              return (
+                created.getMonth() === now.getMonth() &&
+                created.getFullYear() === now.getFullYear()
+              );
+            }).length
+          }
           icon={<Calendar className="w-5 h-5" />}
           color="orange"
         />
@@ -224,7 +257,9 @@ export default function UserManagement() {
         </div>
 
         <div className="mt-4 flex items-center gap-4 text-sm text-slate-400">
-          <span>Showing {filteredUsers.length} of {users.length} users</span>
+          <span>
+            Showing {filteredUsers.length} of {users.length} users
+          </span>
         </div>
       </div>
 
@@ -259,15 +294,22 @@ export default function UserManagement() {
             </thead>
             <tbody className="divide-y divide-slate-800/50">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-800/30 transition-colors">
+                <tr
+                  key={user.id}
+                  className="hover:bg-slate-800/30 transition-colors"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                        {user.full_name?.charAt(0) || 'U'}
+                        {user.full_name?.charAt(0) || "U"}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-white">{user.full_name}</div>
-                        <div className="text-sm text-slate-400">@{user.username}</div>
+                        <div className="text-sm font-medium text-white">
+                          {user.full_name}
+                        </div>
+                        <div className="text-sm text-slate-400">
+                          @{user.username}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -279,14 +321,14 @@ export default function UserManagement() {
                       </div>
                       <div className="flex items-center gap-2 text-slate-400">
                         <Phone className="w-4 h-4" />
-                        {user.phone_number || 'N/A'}
+                        {user.phone_number || "N/A"}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-sm">
                       <MapPin className="w-4 h-4 text-slate-400" />
-                      <span>{user.country || 'N/A'}</span>
+                      <span>{user.country || "N/A"}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -295,11 +337,13 @@ export default function UserManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.role === 'admin' 
-                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
-                        : 'bg-green-500/20 text-green-400 border border-green-500/30'
-                    }`}>
+                    <span
+                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        user.role === "admin"
+                          ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                          : "bg-green-500/20 text-green-400 border border-green-500/30"
+                      }`}
+                    >
                       {user.role}
                     </span>
                   </td>
@@ -308,15 +352,17 @@ export default function UserManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         onClick={() => handleEditUser(user)}
                         className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
                         title="Edit User"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id, user.full_name)}
+                      <button
+                        onClick={() =>
+                          handleDeleteUser(user.id, user.full_name)
+                        }
                         className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
                         title="Delete User"
                       >
@@ -334,7 +380,9 @@ export default function UserManagement() {
           <div className="text-center py-12">
             <User className="w-16 h-16 text-slate-600 mx-auto mb-4" />
             <p className="text-slate-400 text-lg">No users found</p>
-            <p className="text-slate-500 text-sm mt-1">Try adjusting your search or filters</p>
+            <p className="text-slate-500 text-sm mt-1">
+              Try adjusting your search or filters
+            </p>
           </div>
         )}
       </div>
@@ -346,64 +394,103 @@ export default function UserManagement() {
             <div className="p-6 border-b border-slate-800">
               <h3 className="text-2xl font-bold">Edit User</h3>
             </div>
-            
+
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Full Name</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Full Name
+                  </label>
                   <input
                     type="text"
-                    value={editingUser.full_name || ''}
-                    onChange={(e) => setEditingUser({...editingUser, full_name: e.target.value})}
-                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
-                  <input
-                    type="text"
-                    value={editingUser.username || ''}
-                    onChange={(e) => setEditingUser({...editingUser, username: e.target.value})}
+                    value={editingUser.full_name || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        full_name: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Email</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={editingUser.username || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        username: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Email
+                  </label>
                   <input
                     type="email"
-                    value={editingUser.email || ''}
-                    onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                    value={editingUser.email || ""}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, email: e.target.value })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Phone Number</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Phone Number
+                  </label>
                   <input
                     type="tel"
-                    value={editingUser.phone_number || ''}
-                    onChange={(e) => setEditingUser({...editingUser, phone_number: e.target.value})}
+                    value={editingUser.phone_number || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        phone_number: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Country</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Country
+                  </label>
                   <input
                     type="text"
-                    value={editingUser.country || ''}
-                    onChange={(e) => setEditingUser({...editingUser, country: e.target.value})}
+                    value={editingUser.country || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        country: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Currency</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Currency
+                  </label>
                   <select
-                    value={editingUser.currency || 'USD'}
-                    onChange={(e) => setEditingUser({...editingUser, currency: e.target.value})}
+                    value={editingUser.currency || "USD"}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        currency: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   >
                     <option value="USD">USD</option>
@@ -414,21 +501,32 @@ export default function UserManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Balance</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Balance
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     value={editingUser.balance || 0}
-                    onChange={(e) => setEditingUser({...editingUser, balance: parseFloat(e.target.value) || 0})}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        balance: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Role</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Role
+                  </label>
                   <select
-                    value={editingUser.role || 'user'}
-                    onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
+                    value={editingUser.role || "user"}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, role: e.target.value })
+                    }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   >
                     <option value="user">User</option>
@@ -456,25 +554,27 @@ export default function UserManagement() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // Stat Box Component
 function StatBox({ label, value, icon, color }) {
   const colorClasses = {
-    blue: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30',
-    purple: 'from-purple-500/20 to-fuchsia-500/20 border-purple-500/30',
-    green: 'from-green-500/20 to-emerald-500/20 border-green-500/30',
-    orange: 'from-orange-500/20 to-amber-500/20 border-orange-500/30'
-  }
+    blue: "from-blue-500/20 to-cyan-500/20 border-blue-500/30",
+    purple: "from-purple-500/20 to-fuchsia-500/20 border-purple-500/30",
+    green: "from-green-500/20 to-emerald-500/20 border-green-500/30",
+    orange: "from-orange-500/20 to-amber-500/20 border-orange-500/30",
+  };
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur-sm rounded-xl p-4 border`}>
+    <div
+      className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur-sm rounded-xl p-4 border`}
+    >
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm text-slate-400">{label}</p>
         <div className="p-2 bg-white/5 rounded-lg">{icon}</div>
       </div>
       <p className="text-2xl font-bold">{value}</p>
     </div>
-  )
+  );
 }

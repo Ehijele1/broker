@@ -40,6 +40,25 @@ export default function AdminTrades() {
 
   useEffect(() => {
     fetchTrades();
+
+    const tradesChannel = supabase
+      .channel("trades_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "trades",
+        },
+        () => {
+          fetchTrades();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(tradesChannel);
+    };
   }, []);
 
   async function fetchTrades() {

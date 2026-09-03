@@ -1,195 +1,202 @@
-'use client'
-import { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Send, Search, User, Clock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+"use client";
+import { useState, useEffect, useRef } from "react";
+import { MessageSquare, Send, Search, User, Clock } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminChatPage() {
-  const [users, setUsers] = useState([])
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [newMessage, setNewMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const messagesEndRef = useRef(null)
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    loadUsers()
-  }, [])
+    loadUsers();
+  }, []);
 
   useEffect(() => {
     if (selectedUser) {
-      loadMessages(selectedUser.id)
-      markMessagesAsRead(selectedUser.id)
+      loadMessages(selectedUser.id);
+      markMessagesAsRead(selectedUser.id);
     }
-  }, [selectedUser])
+  }, [selectedUser]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToNewMessages()
-    return unsubscribe
-  }, [selectedUser])
+    const unsubscribe = subscribeToNewMessages();
+    return unsubscribe;
+  }, [selectedUser]);
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const loadUsers = async () => {
     try {
       // Get all users who have sent messages
       const { data: chatUsers, error } = await supabase
-        .from('chat_messages')
-        .select('user_id, profiles(full_name, username, email)')
-        .order('created_at', { ascending: false })
+        .from("chat_messages")
+        .select("user_id, profiles(full_name, username, email)")
+        .order("created_at", { ascending: false });
 
-      if (error) throw error
+      if (error) throw error;
 
       // Get unique users with their last message time and unread count
-      const uniqueUsers = []
-      const seenUserIds = new Set()
+      const uniqueUsers = [];
+      const seenUserIds = new Set();
 
       for (const chat of chatUsers) {
         if (!seenUserIds.has(chat.user_id)) {
-          seenUserIds.add(chat.user_id)
+          seenUserIds.add(chat.user_id);
 
           // Get last message
           const { data: lastMsg } = await supabase
-            .from('chat_messages')
-            .select('message, created_at')
-            .eq('user_id', chat.user_id)
-            .order('created_at', { ascending: false })
+            .from("chat_messages")
+            .select("message, created_at")
+            .eq("user_id", chat.user_id)
+            .order("created_at", { ascending: false })
             .limit(1)
-            .single()
+            .single();
 
           // Get unread count
           const { count } = await supabase
-            .from('chat_messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', chat.user_id)
-            .eq('sender_type', 'user')
-            .eq('is_read', false)
+            .from("chat_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", chat.user_id)
+            .eq("sender_type", "user")
+            .eq("is_read", false);
 
           uniqueUsers.push({
             id: chat.user_id,
-            name: chat.profiles?.full_name || chat.profiles?.username || 'Unknown User',
-            email: chat.profiles?.email || '',
-            lastMessage: lastMsg?.message || '',
+            name:
+              chat.profiles?.full_name ||
+              chat.profiles?.username ||
+              "Unknown User",
+            email: chat.profiles?.email || "",
+            lastMessage: lastMsg?.message || "",
             lastMessageTime: lastMsg?.created_at || new Date(),
-            unreadCount: count || 0
-          })
+            unreadCount: count || 0,
+          });
         }
       }
 
       // Sort by last message time
-      uniqueUsers.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime))
-      setUsers(uniqueUsers)
+      uniqueUsers.sort(
+        (a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime),
+      );
+      setUsers(uniqueUsers);
     } catch (error) {
-      console.error('Error loading users:', error)
+      console.error("Error loading users:", error);
     }
-  }
+  };
 
   const loadMessages = async (userId) => {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
+        .from("chat_messages")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true });
 
-      if (error) throw error
-      setMessages(data || [])
+      if (error) throw error;
+      setMessages(data || []);
     } catch (error) {
-      console.error('Error loading messages:', error)
+      console.error("Error loading messages:", error);
     }
-  }
+  };
 
   const markMessagesAsRead = async (userId) => {
     try {
       await supabase
-        .from('chat_messages')
+        .from("chat_messages")
         .update({ is_read: true })
-        .eq('user_id', userId)
-        .eq('sender_type', 'user')
-        .eq('is_read', false)
+        .eq("user_id", userId)
+        .eq("sender_type", "user")
+        .eq("is_read", false);
 
       // Update unread count in users list
-      setUsers(prev =>
-        prev.map(u => (u.id === userId ? { ...u, unreadCount: 0 } : u))
-      )
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, unreadCount: 0 } : u)),
+      );
     } catch (error) {
-      console.error('Error marking messages as read:', error)
+      console.error("Error marking messages as read:", error);
     }
-  }
+  };
 
   const subscribeToNewMessages = () => {
-    const currentSelectedUser = selectedUser
-    
+    const currentSelectedUser = selectedUser;
+
     const channel = supabase
-      .channel('admin_chat_messages')
+      .channel("admin_chat_messages")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages'
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
         },
         (payload) => {
           // If message is for selected user, add to messages
-          if (currentSelectedUser && payload.new.user_id === currentSelectedUser.id) {
-            setMessages(prev => [...prev, payload.new])
-            
+          if (
+            currentSelectedUser &&
+            payload.new.user_id === currentSelectedUser.id
+          ) {
+            setMessages((prev) => [...prev, payload.new]);
+
             // Mark as read if it's from user
-            if (payload.new.sender_type === 'user') {
-              markMessagesAsRead(currentSelectedUser.id)
+            if (payload.new.sender_type === "user") {
+              markMessagesAsRead(currentSelectedUser.id);
             }
           }
 
           // Reload users to update last message and unread count
-          loadUsers()
-        }
+          loadUsers();
+        },
       )
-      .subscribe()
+      .subscribe();
 
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }
+      supabase.removeChannel(channel);
+    };
+  };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSendMessage = async (e) => {
-    e.preventDefault()
-    if (!newMessage.trim() || loading || !selectedUser) return
+    e.preventDefault();
+    if (!newMessage.trim() || loading || !selectedUser) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert([
-          {
-            user_id: selectedUser.id,
-            message: newMessage.trim(),
-            sender_type: 'admin',
-            is_read: false
-          }
-        ])
+      const { error } = await supabase.from("chat_messages").insert([
+        {
+          user_id: selectedUser.id,
+          message: newMessage.trim(),
+          sender_type: "admin",
+          is_read: false,
+        },
+      ]);
 
-      if (error) throw error
+      if (error) throw error;
 
-      setNewMessage('')
-      loadUsers() // Refresh to update last message
+      setNewMessage("");
+      loadUsers(); // Refresh to update last message
     } catch (error) {
-      console.error('Error sending message:', error)
-      alert('Failed to send message')
+      console.error("Error sending message:", error);
+      alert("Failed to send message");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -201,10 +208,13 @@ export default function AdminChatPage() {
             <MessageSquare className="text-emerald-500" size={24} />
             User Messages
           </h2>
-          
+
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search users..."
@@ -228,7 +238,7 @@ export default function AdminChatPage() {
                 key={user.id}
                 onClick={() => setSelectedUser(user)}
                 className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left ${
-                  selectedUser?.id === user.id ? 'bg-emerald-50' : ''
+                  selectedUser?.id === user.id ? "bg-emerald-50" : ""
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -237,15 +247,21 @@ export default function AdminChatPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-gray-900 truncate">{user.name}</h3>
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {user.name}
+                      </h3>
                       {user.unreadCount > 0 && (
                         <span className="bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                           {user.unreadCount}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                    <p className="text-sm text-gray-600 truncate mt-1">{user.lastMessage}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {user.email}
+                    </p>
+                    <p className="text-sm text-gray-600 truncate mt-1">
+                      {user.lastMessage}
+                    </p>
                     <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       <Clock size={12} />
                       {new Date(user.lastMessageTime).toLocaleString()}
@@ -269,7 +285,9 @@ export default function AdminChatPage() {
                   {selectedUser.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">{selectedUser.name}</h3>
+                  <h3 className="font-bold text-gray-900">
+                    {selectedUser.name}
+                  </h3>
                   <p className="text-sm text-gray-500">{selectedUser.email}</p>
                 </div>
               </div>
@@ -279,26 +297,31 @@ export default function AdminChatPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.length === 0 ? (
                 <div className="text-center text-gray-500 mt-8">
-                  <MessageSquare className="mx-auto mb-2 text-gray-400" size={48} />
+                  <MessageSquare
+                    className="mx-auto mb-2 text-gray-400"
+                    size={48}
+                  />
                   <p className="text-sm">No messages yet</p>
                 </div>
               ) : (
                 messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${msg.sender_type === "admin" ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       className={`max-w-[70%] rounded-2xl px-4 py-3 ${
-                        msg.sender_type === 'admin'
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
-                          : 'bg-white border border-gray-200 text-gray-900'
+                        msg.sender_type === "admin"
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                          : "bg-white border border-gray-200 text-gray-900"
                       }`}
                     >
                       <p className="text-sm">{msg.message}</p>
                       <p
                         className={`text-xs mt-1 ${
-                          msg.sender_type === 'admin' ? 'text-emerald-100' : 'text-gray-500'
+                          msg.sender_type === "admin"
+                            ? "text-emerald-100"
+                            : "text-gray-500"
                         }`}
                       >
                         {new Date(msg.created_at).toLocaleString()}
@@ -311,7 +334,10 @@ export default function AdminChatPage() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSendMessage} className="bg-white p-4 border-t border-gray-200">
+            <form
+              onSubmit={handleSendMessage}
+              className="bg-white p-4 border-t border-gray-200"
+            >
               <div className="flex gap-3">
                 <input
                   type="text"
@@ -337,12 +363,16 @@ export default function AdminChatPage() {
           <div className="flex-1 flex items-center justify-center text-gray-500">
             <div className="text-center">
               <MessageSquare className="mx-auto mb-4 text-gray-400" size={64} />
-              <h3 className="text-xl font-semibold mb-2">Select a conversation</h3>
-              <p className="text-sm">Choose a user from the list to start chatting</p>
+              <h3 className="text-xl font-semibold mb-2">
+                Select a conversation
+              </h3>
+              <p className="text-sm">
+                Choose a user from the list to start chatting
+              </p>
             </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

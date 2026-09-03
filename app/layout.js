@@ -1,12 +1,12 @@
-import './globals.css';
+import "./globals.css";
 
 export const metadata = {
-  title: 'SecureProTrading',
-  description: 'Professional Trading Platform',
+  title: "SecureProTrading",
+  description: "Professional Trading Platform",
   icons: {
-    icon: '/logo.png',  // or whatever you named it
+    icon: "/logo.png", // or whatever you named it
   },
-}
+};
 
 export default function RootLayout({ children }) {
   return (
