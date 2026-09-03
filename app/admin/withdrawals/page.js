@@ -35,6 +35,25 @@ export default function AdminWithdrawals() {
 
   useEffect(() => {
     fetchWithdrawals();
+
+    const withdrawalsChannel = supabase
+      .channel("withdrawals_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "withdrawals",
+        },
+        () => {
+          fetchWithdrawals();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(withdrawalsChannel);
+    };
   }, []);
 
   const fetchWithdrawals = async () => {
