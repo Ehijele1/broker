@@ -41,6 +41,25 @@ export default function AdminDeposits() {
 
   useEffect(() => {
     fetchDeposits();
+
+    const depositsChannel = supabase
+      .channel("deposits_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "deposits",
+        },
+        () => {
+          fetchDeposits();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(depositsChannel);
+    };
   }, []);
 
   const fetchDeposits = async () => {
