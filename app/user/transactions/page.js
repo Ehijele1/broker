@@ -9,7 +9,7 @@ import {
   Calendar,
 } from "lucide-react";
 
-export default function AdminTransactions() {
+export default function UserTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
@@ -133,11 +133,20 @@ export default function AdminTransactions() {
         );
 
         if (withdrawal) {
+          const step = withdrawal.current_step ?? 1;
+          const savedProgress = withdrawal.progress ?? 0;
+
           setSelectedWithdrawal(withdrawal);
-          setProgress(withdrawal.progress ?? 0);
-          setDisplayProgress(withdrawal.progress ?? 0);
-          setCurrentStep(withdrawal.current_step ?? 1);
-          setShowVerification((withdrawal.current_step ?? 1) <= 4);
+          setProgress(savedProgress);
+          setDisplayProgress(
+            step === 1 && savedProgress === 0
+              ? (withdrawal.step_percentages?.[0] ?? 0)
+              : savedProgress,
+          );
+          setCurrentStep(step);
+          setShowVerification(
+            !(step === 1 && savedProgress === 0) && step <= 4,
+          );
           setStepCode("");
           setCodeError("");
           setShowProcessModal(true);
@@ -174,13 +183,20 @@ export default function AdminTransactions() {
       return;
     }
 
+    const step = transaction.current_step ?? 1;
+    const savedProgress = transaction.progress ?? 0;
+
     setSelectedWithdrawal(transaction);
     setStepCode("");
     setCodeError("");
-    setProgress(transaction.progress ?? 0);
-    setDisplayProgress(transaction.progress ?? 0);
-    setCurrentStep(transaction.current_step ?? 1);
-    setShowVerification((transaction.current_step ?? 1) <= 4);
+    setProgress(savedProgress);
+    setDisplayProgress(
+      step === 1 && savedProgress === 0
+        ? (transaction.step_percentages?.[0] ?? 0)
+        : savedProgress,
+    );
+    setCurrentStep(step);
+    setShowVerification(!(step === 1 && savedProgress === 0) && step <= 4);
     setShowProcessModal(true);
   };
 

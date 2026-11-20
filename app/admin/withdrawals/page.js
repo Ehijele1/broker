@@ -26,9 +26,9 @@ export default function AdminWithdrawals() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [adminNote, setAdminNote] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [issuingCode, setIssuingCode] = useState(false);
   const [codeMessage, setCodeMessage] = useState("");
+  const [withdrawalCodes, setWithdrawalCodes] = useState([]);
+  const [loadingCodes, setLoadingCodes] = useState(false);
   const [stats, setStats] = useState({
     pending: 0,
     approved: 0,
@@ -128,37 +128,6 @@ export default function AdminWithdrawals() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleIssueCode = async () => {
-    if (!selectedWithdrawal || !verificationCode.trim() || issuingCode) {
-      return;
-    }
-
-    try {
-      setIssuingCode(true);
-      setCodeMessage("");
-
-      const { error } = await supabase.rpc(
-        "issue_withdrawal_verification_code",
-        {
-          p_withdrawal_id: selectedWithdrawal.id,
-          p_step_number: selectedWithdrawal.current_step,
-          p_code: verificationCode.trim(),
-        },
-      );
-
-      if (error) throw error;
-
-      setCodeMessage(
-        `Verification code issued successfully for Step ${selectedWithdrawal.current_step}.`,
-      );
-    } catch (error) {
-      console.error("Error issuing verification code:", error);
-      setCodeMessage(error.message || "Failed to issue verification code.");
-    } finally {
-      setIssuingCode(false);
-    }
-  };
-
   const handleApprove = async (withdrawal) => {
     if (
       !withdrawal.process_completed ||
@@ -232,11 +201,32 @@ export default function AdminWithdrawals() {
     }
   };
 
-  const viewDetails = (withdrawal) => {
+  const viewDetails = async (withdrawal) => {
     setSelectedWithdrawal(withdrawal);
-    setVerificationCode("");
     setCodeMessage("");
+    setWithdrawalCodes([]);
     setShowDetailsModal(true);
+
+    if (withdrawal.status === "pending") {
+      try {
+        setLoadingCodes(true);
+
+        const { data, error } = await supabase
+          .from("withdrawal_verification_codes")
+          .select("step_number, verification_code")
+          .eq("withdrawal_id", withdrawal.id)
+          .order("step_number", { ascending: true });
+
+        if (error) throw error;
+
+        setWithdrawalCodes(data || []);
+      } catch (error) {
+        console.error("Error fetching withdrawal codes:", error);
+        setCodeMessage(error.message || "Failed to load verification codes.");
+      } finally {
+        setLoadingCodes(false);
+      }
+    }
   };
 
   if (loading) {
@@ -526,67 +516,85 @@ export default function AdminWithdrawals() {
               </div>
 
               {/* Verification Code Management */}
-              {selectedWithdrawal.status === "pending" &&
-                selectedWithdrawal.current_step >= 1 &&
-                selectedWithdrawal.current_step <= 4 &&
-                !selectedWithdrawal.process_completed && (
-                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
-                    <h4 className="font-semibold mb-2">
-                      Withdrawal Verification
-                    </h4>
+              {selectedWithdrawal.status === "pending" && (
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                  <h4 className="font-semibold mb-2">
+                    Withdrawal Verification Codes
+                  </h4>
 
-                    <p className="text-sm text-slate-300 mb-3">
-                      Current verification step:{" "}
-                      <span className="font-bold text-purple-400">
-                        {selectedWithdrawal.current_step} of 4
-                      </span>
-                    </p>
+                  <p className="text-sm text-slate-300 mb-3">
+                    Current step:{" "}
+                    <span className="font-bold text-purple-400">
+                      {selectedWithdrawal.process_completed
+                        ? "Completed"
+                        : `${selectedWithdrawal.current_step} of 4`}
+                    </span>
+                  </p>
 
-                    <div className="mt-3">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-slate-400">
-                          Verification progress
-                        </span>
-                        <span className="font-semibold text-purple-400">
-                          {selectedWithdrawal.progress || 0}%
-                        </span>
-                      </div>
-
-                      <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-500 transition-all duration-500"
-                          style={{
-                            width: `${selectedWithdrawal.progress || 0}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      placeholder="Enter verification code"
-                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-
-                    <button
-                      onClick={handleIssueCode}
-                      disabled={!verificationCode.trim() || issuingCode}
-                      className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50"
-                    >
-                      {issuingCode
-                        ? "Issuing Code..."
-                        : "Issue Verification Code"}
-                    </button>
-
-                    {codeMessage && (
-                      <p className="text-sm mt-3 text-purple-300">
-                        {codeMessage}
-                      </p>
-                    )}
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-slate-400">
+                      Verification progress
+                    </span>
+                    <span className="font-semibold text-purple-400">
+                      {selectedWithdrawal.progress || 0}%
+                    </span>
                   </div>
-                )}
+
+                  <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden mb-4">
+                    <div
+                      className="h-full bg-purple-500 transition-all duration-500"
+                      style={{
+                        width: `${selectedWithdrawal.progress || 0}%`,
+                      }}
+                    />
+                  </div>
+
+                  {loadingCodes ? (
+                    <p className="text-sm text-slate-400">
+                      Loading verification codes...
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {[1, 2, 3, 4].map((step) => {
+                        const code = withdrawalCodes.find(
+                          (item) => item.step_number === step,
+                        );
+
+                        const completed =
+                          selectedWithdrawal.current_step > step;
+                        const current =
+                          selectedWithdrawal.current_step === step;
+
+                        return (
+                          <div
+                            key={step}
+                            className="flex items-center justify-between gap-3 bg-slate-800 rounded-lg p-3"
+                          >
+                            <div>
+                              <p className="font-medium">Step {step}</p>
+                              <p className="text-xs text-slate-400">
+                                {completed
+                                  ? "Completed"
+                                  : current
+                                    ? "Current step"
+                                    : "Waiting"}
+                              </p>
+                            </div>
+
+                            <p className="font-mono font-bold text-purple-300 tracking-wider">
+                              {code?.verification_code || "Not found"}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {codeMessage && (
+                    <p className="text-sm mt-3 text-red-400">{codeMessage}</p>
+                  )}
+                </div>
+              )}
 
               {/* Payment Details */}
               {selectedWithdrawal.payment_method === "crypto" ? (
