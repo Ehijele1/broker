@@ -12,6 +12,13 @@ import {
 export default function AdminTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [progress, setProgress] = useState(0);
+  const [stepCode, setStepCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [isProcessingStep, setIsProcessingStep] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -111,6 +118,31 @@ export default function AdminTransactions() {
 
       setTransactions(allTransactions);
 
+      // Automatically open the withdrawal modal after redirect
+      const params = new URLSearchParams(window.location.search);
+      const withdrawalId = params.get("withdrawal");
+
+      if (withdrawalId) {
+        const withdrawal = allTransactions.find(
+          (transaction) =>
+            transaction.id === withdrawalId &&
+            transaction.type === "withdrawal" &&
+            transaction.status === "pending",
+        );
+
+        if (withdrawal) {
+          setSelectedWithdrawal(withdrawal);
+          setProgress(withdrawal.progress ?? 0);
+          setCurrentStep(withdrawal.current_step ?? 1);
+          setStepCode("");
+          setCodeError("");
+          setShowProcessModal(true);
+        }
+
+        // Remove the query parameter after checking it
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+
       // Calculate stats
       const totalDeposits = deposits
         .filter((d) => d.status === "approved")
@@ -130,6 +162,75 @@ export default function AdminTransactions() {
       console.error("Error fetching transactions:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTransactionClick = (transaction) => {
+    if (transaction.type !== "withdrawal" || transaction.status !== "pending") {
+      return;
+    }
+
+    setSelectedWithdrawal(transaction);
+    setStepCode("");
+    setCodeError("");
+    setProgress(transaction.progress ?? 0);
+    setCurrentStep(transaction.current_step ?? 1);
+    setShowProcessModal(true);
+  };
+
+  const handleVerifyCode = async () => {
+    if (!stepCode.trim() || isProcessingStep || !selectedWithdrawal) return;
+
+    setIsProcessingStep(true);
+    setCodeError("");
+
+    try {
+      const { data, error } = await supabase.rpc("verify_withdrawal_step", {
+        p_withdrawal_id: selectedWithdrawal.id,
+        p_step_number: currentStep,
+        p_code: stepCode.trim(),
+      });
+
+      if (error) throw error;
+
+      setProgress(data.progress);
+      setCurrentStep(data.current_step);
+
+      setSelectedWithdrawal((prev) =>
+        prev
+          ? {
+              ...prev,
+              progress: data.progress,
+              current_step: data.current_step,
+              process_completed: data.process_completed,
+            }
+          : prev,
+      );
+
+      setTransactions((prev) =>
+        prev.map((transaction) =>
+          transaction.id === selectedWithdrawal.id
+            ? {
+                ...transaction,
+                progress: data.progress,
+                current_step: data.current_step,
+                process_completed: data.process_completed,
+              }
+            : transaction,
+        ),
+      );
+
+      setStepCode("");
+    } catch (error) {
+      console.error("Verification error:", error);
+
+      setCodeError(
+        error.message.includes("Invalid verification code")
+          ? "Invalid code. Please contact admin for the correct code."
+          : error.message,
+      );
+    } finally {
+      setIsProcessingStep(false);
     }
   };
 
@@ -400,11 +501,17 @@ export default function AdminTransactions() {
                 return (
                   <tr
                     key={transaction.id}
-                    className={
+                    onClick={() => handleTransactionClick(transaction)}
+                    className={`${
                       isDarkMode
                         ? "hover:bg-slate-800/30"
                         : "hover:bg-indigo-50/50"
-                    }
+                    } ${
+                      transaction.type === "withdrawal" &&
+                      transaction.status === "pending"
+                        ? "cursor-pointer"
+                        : ""
+                    }`}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -532,6 +639,115 @@ export default function AdminTransactions() {
           </div>
         )}
       </div>
+
+      {/* Withdrawal Processing Modal */}
+      {showProcessModal && selectedWithdrawal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setShowProcessModal(false)}
+        >
+          <div
+            className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl ${
+              isDarkMode
+                ? "bg-slate-900 border-slate-700 text-white"
+                : "bg-white border-gray-200 text-gray-900"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold">Withdrawal Processing</h2>
+                <p className="text-sm opacity-60 mt-1">
+                  Track your withdrawal progress
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowProcessModal(false)}
+                className="text-2xl opacity-60 hover:opacity-100"
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Withdrawal Amount */}
+            <div className="text-center py-5">
+              <p className="text-sm opacity-60 mb-2">Withdrawal Amount</p>
+
+              <h3 className="text-3xl font-bold">
+                {selectedWithdrawal.currency}{" "}
+                {Number(selectedWithdrawal.amount).toFixed(2)}
+              </h3>
+            </div>
+
+            {/* Progress */}
+            <div className="mb-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span>Processing progress</span>
+                <span className="font-semibold">{progress}%</span>
+              </div>
+
+              <div className="w-full h-3 rounded-full bg-gray-500/20 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, Math.max(0, progress))}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Verification */}
+            {currentStep <= 4 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Verification code
+                  </label>
+
+                  <input
+                    type="text"
+                    value={stepCode}
+                    onChange={(e) => setStepCode(e.target.value)}
+                    placeholder="Enter your verification code"
+                    className={`w-full rounded-lg border px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      isDarkMode
+                        ? "bg-slate-800 border-slate-700 text-white"
+                        : "bg-white border-gray-300 text-gray-900"
+                    }`}
+                  />
+                </div>
+
+                {codeError && (
+                  <p className="text-sm text-red-500">{codeError}</p>
+                )}
+
+                <button
+                  onClick={handleVerifyCode}
+                  disabled={!stepCode.trim() || isProcessingStep}
+                  className="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3"
+                >
+                  {isProcessingStep ? "Verifying..." : "Continue"}
+                </button>
+              </div>
+            )}
+
+            {/* Completion */}
+            {currentStep > 4 && (
+              <div className="text-center py-5">
+                <p className="text-emerald-500 font-semibold text-lg">
+                  Verification completed
+                </p>
+                <p className="text-sm opacity-60 mt-2">
+                  Your verification process is complete.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
