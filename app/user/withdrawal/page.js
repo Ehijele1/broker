@@ -208,12 +208,7 @@ export default function WithdrawalPage() {
       setAccountName("");
       setAccountNumber("");
 
-      // Open the multi-step process modal instead of the toast
-      setShowProcessModal(true);
-      setCurrentStep(1);
-      setProgress(0);
-      setStepCode("");
-      setCodeError("");
+      router.push(`/user/transactions?withdrawal=${withdrawal.id}`);
     } catch (error) {
       console.error("Error creating withdrawal:", error);
       alert("Failed to submit withdrawal request. Please try again.");
