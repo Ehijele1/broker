@@ -26,6 +26,9 @@ export default function AdminWithdrawals() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [adminNote, setAdminNote] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [issuingCode, setIssuingCode] = useState(false);
+  const [codeMessage, setCodeMessage] = useState("");
   const [stats, setStats] = useState({
     pending: 0,
     approved: 0,
@@ -78,10 +81,12 @@ export default function AdminWithdrawals() {
       setWithdrawals(data || []);
 
       // Calculate stats
-      const pending = data.filter((w) => w.status === "pending").length;
-      const approved = data.filter((w) => w.status === "approved").length;
-      const rejected = data.filter((w) => w.status === "rejected").length;
-      const totalAmount = data
+      const rows = data || [];
+
+      const pending = rows.filter((w) => w.status === "pending").length;
+      const approved = rows.filter((w) => w.status === "approved").length;
+      const rejected = rows.filter((w) => w.status === "rejected").length;
+      const totalAmount = rows
         .filter((w) => w.status === "approved")
         .reduce((sum, w) => sum + Number(w.amount), 0);
 
@@ -92,6 +97,18 @@ export default function AdminWithdrawals() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!selectedWithdrawal) return;
+
+    const updatedSelected = withdrawals.find(
+      (w) => w.id === selectedWithdrawal.id,
+    );
+
+    if (updatedSelected && updatedSelected !== selectedWithdrawal) {
+      setSelectedWithdrawal(updatedSelected);
+    }
+  }, [withdrawals, selectedWithdrawal]);
 
   const filteredWithdrawals = withdrawals.filter((withdrawal) => {
     const matchesSearch =
@@ -111,7 +128,48 @@ export default function AdminWithdrawals() {
     return matchesSearch && matchesStatus;
   });
 
+  const handleIssueCode = async () => {
+    if (!selectedWithdrawal || !verificationCode.trim() || issuingCode) {
+      return;
+    }
+
+    try {
+      setIssuingCode(true);
+      setCodeMessage("");
+
+      const { error } = await supabase.rpc(
+        "issue_withdrawal_verification_code",
+        {
+          p_withdrawal_id: selectedWithdrawal.id,
+          p_step_number: selectedWithdrawal.current_step,
+          p_code: verificationCode.trim(),
+        },
+      );
+
+      if (error) throw error;
+
+      setCodeMessage(
+        `Verification code issued successfully for Step ${selectedWithdrawal.current_step}.`,
+      );
+    } catch (error) {
+      console.error("Error issuing verification code:", error);
+      setCodeMessage(error.message || "Failed to issue verification code.");
+    } finally {
+      setIssuingCode(false);
+    }
+  };
+
   const handleApprove = async (withdrawal) => {
+    if (
+      !withdrawal.process_completed ||
+      withdrawal.current_step !== 5 ||
+      withdrawal.progress !== 100
+    ) {
+      alert(
+        "This withdrawal must complete all four verification steps before approval.",
+      );
+      return;
+    }
     if (
       !confirm(
         `Approve withdrawal of ${withdrawal.currency} ${withdrawal.amount} for ${withdrawal.profiles.full_name}?`,
@@ -123,46 +181,12 @@ export default function AdminWithdrawals() {
     try {
       setProcessing(true);
 
-      // Get user's current balance
-      const { data: userData, error: userError } = await supabase
-        .from("profiles")
-        .select("balance")
-        .eq("id", withdrawal.user_id)
-        .single();
+      const { error } = await supabase.rpc("approve_withdrawal", {
+        p_withdrawal_id: withdrawal.id,
+        p_admin_note: adminNote || null,
+      });
 
-      if (userError) throw userError;
-
-      const currentBalance = Number(userData.balance);
-      const withdrawalAmount = Number(withdrawal.amount);
-
-      // Check if user still has sufficient balance
-      if (currentBalance < withdrawalAmount) {
-        alert("User has insufficient balance for this withdrawal");
-        return;
-      }
-
-      const newBalance = currentBalance - withdrawalAmount;
-
-      // Update user balance (deduct amount)
-      const { error: balanceError } = await supabase
-        .from("profiles")
-        .update({ balance: newBalance })
-        .eq("id", withdrawal.user_id);
-
-      if (balanceError) throw balanceError;
-
-      // Update withdrawal status
-      const { error: withdrawalError } = await supabase
-        .from("withdrawals")
-        .update({
-          status: "approved",
-          admin_note: adminNote,
-          processed_by: (await supabase.auth.getUser()).data.user.id,
-          processed_at: new Date().toISOString(),
-        })
-        .eq("id", withdrawal.id);
-
-      if (withdrawalError) throw withdrawalError;
+      if (error) throw error;
 
       alert("Withdrawal approved successfully!");
       setShowDetailsModal(false);
@@ -178,29 +202,31 @@ export default function AdminWithdrawals() {
 
   const handleReject = async (withdrawal) => {
     const reason = prompt("Enter rejection reason:");
-    if (!reason) return;
+
+    if (!reason || !reason.trim()) return;
+
+    if (!confirm("Are you sure you want to reject this withdrawal?")) {
+      return;
+    }
 
     try {
       setProcessing(true);
 
-      const { error } = await supabase
-        .from("withdrawals")
-        .update({
-          status: "rejected",
-          admin_note: reason,
-          processed_by: (await supabase.auth.getUser()).data.user.id,
-          processed_at: new Date().toISOString(),
-        })
-        .eq("id", withdrawal.id);
+      const { error } = await supabase.rpc("reject_withdrawal", {
+        p_withdrawal_id: withdrawal.id,
+        p_admin_note: reason.trim(),
+      });
 
       if (error) throw error;
 
-      alert("Withdrawal rejected");
+      alert("Withdrawal rejected successfully!");
+
       setShowDetailsModal(false);
+      setAdminNote("");
       fetchWithdrawals();
     } catch (error) {
       console.error("Error rejecting withdrawal:", error);
-      alert("Failed to reject withdrawal");
+      alert("Failed to reject withdrawal: " + error.message);
     } finally {
       setProcessing(false);
     }
@@ -208,6 +234,8 @@ export default function AdminWithdrawals() {
 
   const viewDetails = (withdrawal) => {
     setSelectedWithdrawal(withdrawal);
+    setVerificationCode("");
+    setCodeMessage("");
     setShowDetailsModal(true);
   };
 
@@ -497,6 +525,69 @@ export default function AdminWithdrawals() {
                 </div>
               </div>
 
+              {/* Verification Code Management */}
+              {selectedWithdrawal.status === "pending" &&
+                selectedWithdrawal.current_step >= 1 &&
+                selectedWithdrawal.current_step <= 4 &&
+                !selectedWithdrawal.process_completed && (
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                    <h4 className="font-semibold mb-2">
+                      Withdrawal Verification
+                    </h4>
+
+                    <p className="text-sm text-slate-300 mb-3">
+                      Current verification step:{" "}
+                      <span className="font-bold text-purple-400">
+                        {selectedWithdrawal.current_step} of 4
+                      </span>
+                    </p>
+
+                    <div className="mt-3">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-slate-400">
+                          Verification progress
+                        </span>
+                        <span className="font-semibold text-purple-400">
+                          {selectedWithdrawal.progress || 0}%
+                        </span>
+                      </div>
+
+                      <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-500 transition-all duration-500"
+                          style={{
+                            width: `${selectedWithdrawal.progress || 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="Enter verification code"
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+
+                    <button
+                      onClick={handleIssueCode}
+                      disabled={!verificationCode.trim() || issuingCode}
+                      className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50"
+                    >
+                      {issuingCode
+                        ? "Issuing Code..."
+                        : "Issue Verification Code"}
+                    </button>
+
+                    {codeMessage && (
+                      <p className="text-sm mt-3 text-purple-300">
+                        {codeMessage}
+                      </p>
+                    )}
+                  </div>
+                )}
+
               {/* Payment Details */}
               {selectedWithdrawal.payment_method === "crypto" ? (
                 <div className="bg-slate-800/50 rounded-xl p-4">
@@ -633,7 +724,10 @@ export default function AdminWithdrawals() {
                     onClick={() => handleApprove(selectedWithdrawal)}
                     disabled={
                       processing ||
-                      Number(selectedWithdrawal.profiles?.balance) <
+                      !selectedWithdrawal.process_completed ||
+                      selectedWithdrawal.current_step !== 5 ||
+                      selectedWithdrawal.progress !== 100 ||
+                      Number(selectedWithdrawal.profiles?.balance || 0) <
                         Number(selectedWithdrawal.amount)
                     }
                     className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors font-semibold disabled:opacity-50 flex items-center gap-2"
@@ -643,7 +737,14 @@ export default function AdminWithdrawals() {
                     ) : (
                       <CheckCircle className="w-5 h-5" />
                     )}
-                    Approve & Deduct Balance
+                    {!selectedWithdrawal.process_completed ||
+                    selectedWithdrawal.current_step !== 5 ||
+                    selectedWithdrawal.progress !== 100
+                      ? "Awaiting Verification"
+                      : Number(selectedWithdrawal.profiles?.balance || 0) <
+                          Number(selectedWithdrawal.amount)
+                        ? "Insufficient Balance"
+                        : "Approve & Deduct Balance"}
                   </button>
                 </>
               )}
