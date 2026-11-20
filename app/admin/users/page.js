@@ -103,7 +103,7 @@ export default function UserManagement() {
           country: editingUser.country,
           currency: editingUser.currency,
           balance: editingUser.balance,
-          role: editingUser.role,
+          plan: editingUser.plan,
         })
         .eq("id", editingUser.id);
 
@@ -520,17 +520,18 @@ export default function UserManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Role
+                    Plan
                   </label>
                   <select
-                    value={editingUser.role || "user"}
+                    value={editingUser.plan || "basic"}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, role: e.target.value })
+                      setEditingUser({ ...editingUser, plan: e.target.value })
                     }
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                   >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="basic">Basic</option>
+                    <option value="premium">Premium</option>
+                    <option value="vip">VIP</option>
                   </select>
                 </div>
               </div>
