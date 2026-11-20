@@ -120,32 +120,7 @@ export default function WithdrawalPage() {
 
       setProfile(profileData);
 
-      // Find the user's latest unfinished withdrawal
-      const { data: withdrawal, error: withdrawalError } = await supabase
-        .from("withdrawals")
-        .select("id, current_step, progress, step_percentages")
-        .eq("user_id", user.id)
-        .eq("process_completed", false)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (withdrawalError) throw withdrawalError;
-
-      // Restore the unfinished withdrawal
-      if (
-        withdrawal &&
-        withdrawal.current_step >= 1 &&
-        withdrawal.current_step <= 4
-      ) {
-        setWithdrawalId(withdrawal.id);
-        setCurrentStep(withdrawal.current_step);
-        setProgress(withdrawal.progress || 0);
-        setStepPercentages(withdrawal.step_percentages || []);
-        setStepCode("");
-        setCodeError("");
-        setShowProcessModal(true);
-      }
+      // Do not auto-open the process modal when user just visits the page
     } catch (error) {
       console.error("Error loading withdrawal page:", error);
     } finally {
