@@ -16,6 +16,8 @@ export default function AdminTransactions() {
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [progress, setProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const [showVerification, setShowVerification] = useState(false);
   const [stepCode, setStepCode] = useState("");
   const [codeError, setCodeError] = useState("");
   const [isProcessingStep, setIsProcessingStep] = useState(false);
@@ -133,7 +135,9 @@ export default function AdminTransactions() {
         if (withdrawal) {
           setSelectedWithdrawal(withdrawal);
           setProgress(withdrawal.progress ?? 0);
+          setDisplayProgress(withdrawal.progress ?? 0);
           setCurrentStep(withdrawal.current_step ?? 1);
+          setShowVerification((withdrawal.current_step ?? 1) <= 4);
           setStepCode("");
           setCodeError("");
           setShowProcessModal(true);
@@ -174,7 +178,9 @@ export default function AdminTransactions() {
     setStepCode("");
     setCodeError("");
     setProgress(transaction.progress ?? 0);
+    setDisplayProgress(transaction.progress ?? 0);
     setCurrentStep(transaction.current_step ?? 1);
+    setShowVerification((transaction.current_step ?? 1) <= 4);
     setShowProcessModal(true);
   };
 
@@ -194,7 +200,9 @@ export default function AdminTransactions() {
       if (error) throw error;
 
       setProgress(data.progress);
+      setShowVerification(false);
       setCurrentStep(data.current_step);
+      setDisplayProgress(data.progress);
 
       setSelectedWithdrawal((prev) =>
         prev
@@ -685,22 +693,27 @@ export default function AdminTransactions() {
             {/* Progress */}
             <div className="mb-6">
               <div className="flex justify-between text-sm mb-2">
-                <span>Processing progress</span>
-                <span className="font-semibold">{progress}%</span>
+                <span>Verification progress</span>
+                <span className="font-semibold">{displayProgress}%</span>
               </div>
 
               <div className="w-full h-3 rounded-full bg-gray-500/20 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-1000 ease-in-out"
                   style={{
-                    width: `${Math.min(100, Math.max(0, progress))}%`,
+                    width: `${Math.min(100, Math.max(0, displayProgress))}%`,
+                  }}
+                  onTransitionEnd={() => {
+                    if (currentStep <= 4 && !showVerification) {
+                      setShowVerification(true);
+                    }
                   }}
                 />
               </div>
             </div>
 
             {/* Verification */}
-            {currentStep <= 4 && (
+            {showVerification && currentStep <= 4 && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
