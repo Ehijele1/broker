@@ -67,7 +67,7 @@ export default function UpgradePlanPage() {
       maxAmount: "$5,000",
       features: [
         { text: "Max 3 Active Trades", included: true },
-        { text: "0.25% Trading Fee", included: true },
+        { text: "10.25% Trading Fee", included: true },
         { text: "Copy Trading Access", included: true },
         { text: "Standard Support", included: true },
         { text: "Basic Market Data", included: true },
@@ -90,7 +90,7 @@ export default function UpgradePlanPage() {
       maxAmount: "$50,000",
       features: [
         { text: "Max 5 Active Trades", included: true },
-        { text: "0.45% Trading Fee", included: true },
+        { text: "12.45% Trading Fee", included: true },
         { text: "Copy Trading Access", included: true },
         { text: "Priority Support", included: true },
         { text: "Advanced Market Data", included: true },
@@ -112,7 +112,7 @@ export default function UpgradePlanPage() {
       maxAmount: "Above",
       features: [
         { text: "Max 7 Active Trades", included: true },
-        { text: "0.65% Trading Fee", included: true },
+        { text: "15.65% Trading Fee", included: true },
         { text: "Copy Trading Access", included: true },
         { text: "24/7 Dedicated Support", included: true },
         { text: "Premium Market Data", included: true },
