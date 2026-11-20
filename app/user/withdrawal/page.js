@@ -78,7 +78,6 @@ export default function WithdrawalPage() {
       icon: <Bitcoin className="w-6 h-6" />,
       description: "Withdraw to crypto wallet",
       processingTime: "24-48 hours",
-      fees: "2%",
       minAmount: 50,
       color: "from-amber-500 to-orange-500",
     },
@@ -88,7 +87,6 @@ export default function WithdrawalPage() {
       icon: <Building2 className="w-6 h-6" />,
       description: "Withdraw to bank account",
       processingTime: "3-5 business days",
-      fees: "5%",
       minAmount: 100,
       color: "from-emerald-500 to-teal-500",
     },
@@ -564,14 +562,6 @@ export default function WithdrawalPage() {
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <DollarSign
-                  className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                    isDarkMode ? "text-amber-400" : "text-amber-600"
-                  }`}
-                />
-                <span>Withdrawal fees apply based on payment method</span>
-              </li>
-              <li className="flex items-start gap-2">
                 <Shield
                   className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
                     isDarkMode ? "text-amber-400" : "text-amber-600"
@@ -672,8 +662,7 @@ export default function WithdrawalPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
-                        Fee: {method.fees} • Min: {profile.currency}{" "}
-                        {method.minAmount}
+                        Min: {profile.currency} {method.minAmount}
                       </div>
                     </div>
                   </div>
@@ -740,8 +729,7 @@ export default function WithdrawalPage() {
                     }`}
                   >
                     Available: {profile.currency} {availableBalance.toFixed(2)}{" "}
-                    • Minimum: {profile.currency} {selectedMethodData.minAmount}{" "}
-                    • Fee: {selectedMethodData.fees}
+                    • Minimum: {profile.currency} {selectedMethodData.minAmount}
                   </p>
                 )}
               </div>
@@ -976,20 +964,6 @@ export default function WithdrawalPage() {
                   {amount || "0"} {profile.currency}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span
-                  className={isDarkMode ? "text-slate-400" : "text-gray-600"}
-                >
-                  Fee:
-                </span>
-                <span
-                  className={`font-semibold ${
-                    isDarkMode ? "text-white" : "text-gray-900"
-                  }`}
-                >
-                  {selectedMethodData?.fees || "N/A"}
-                </span>
-              </div>
               <div
                 className={`pt-3 border-t ${
                   isDarkMode ? "border-emerald-500/30" : "border-indigo-200"
@@ -1006,13 +980,7 @@ export default function WithdrawalPage() {
                       isDarkMode ? "text-emerald-400" : "text-indigo-600"
                     }`}
                   >
-                    {amount && selectedMethodData
-                      ? (
-                          parseFloat(amount) *
-                          (1 - parseFloat(selectedMethodData.fees) / 100)
-                        ).toFixed(2)
-                      : "0"}{" "}
-                    {profile.currency}
+                    {amount || "0"} {profile.currency}
                   </span>
                 </div>
               </div>
