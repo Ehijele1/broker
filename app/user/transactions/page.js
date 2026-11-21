@@ -75,30 +75,30 @@ export default function UserTransactions() {
     setShowProcessModal(true);
   };
 
-  // Counts up to the current step's checkpoint, then shows the code box
+  // Counts up to the current checkpoint, then shows the code box.
+  // After the 4th code it finishes the bar to 100%.
   useEffect(() => {
     if (!showProcessModal || !selectedWithdrawal) return;
 
-    if (currentStep > 4) {
-      setShowVerification(false);
-      return;
-    }
-
     const percentages = selectedWithdrawal.step_percentages || [];
-    const target = Math.min(
-      100,
-      percentages.slice(0, currentStep).reduce((sum, n) => sum + Number(n), 0),
-    );
+    const checkpointTotal = (steps) =>
+      Math.min(
+        100,
+        percentages.slice(0, steps).reduce((sum, n) => sum + Number(n), 0),
+      );
 
-    let current = progress;
+    const finishing = currentStep > 4;
+    const target = finishing ? 100 : checkpointTotal(currentStep);
+    let current = finishing ? checkpointTotal(4) : progress;
+
+    setShowVerification(false);
 
     if (current >= target) {
       setDisplayProgress(target);
-      setShowVerification(true);
+      if (!finishing) setShowVerification(true);
       return;
     }
 
-    setShowVerification(false);
     setDisplayProgress(current);
 
     const timer = setInterval(() => {
@@ -107,9 +107,9 @@ export default function UserTransactions() {
 
       if (current >= target) {
         clearInterval(timer);
-        setShowVerification(true);
+        if (!finishing) setShowVerification(true);
       }
-    }, 80); // speed: lower = faster, higher = slower
+    }, 150); // speed: lower = faster, higher = slower
 
     return () => clearInterval(timer);
   }, [showProcessModal, selectedWithdrawal?.id, currentStep, progress]);
@@ -239,7 +239,6 @@ export default function UserTransactions() {
       setProgress(data.progress);
       setShowVerification(false);
       setCurrentStep(data.current_step);
-      setDisplayProgress(data.progress);
 
       setSelectedWithdrawal((prev) =>
         prev
@@ -780,7 +779,7 @@ export default function UserTransactions() {
             )}
 
             {/* Completion */}
-            {currentStep > 4 && (
+            {currentStep > 4 && displayProgress >= 100 && (
               <div className="text-center py-5">
                 <p className="text-emerald-500 font-semibold text-lg">
                   Verification completed

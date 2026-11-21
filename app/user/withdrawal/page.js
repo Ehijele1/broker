@@ -249,20 +249,18 @@ export default function WithdrawalPage() {
   };
 
   // Generate 4 random percentages that always add up to 100
+  // Random checkpoints: ~15-28%, then +15-25, then +15-22, last at 90-98%.
+  // Stored as increments; the last step finishes the remaining % to 100.
   const generateRandomSteps = () => {
-    const cuts = [];
+    const rand = (min, max) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
 
-    while (cuts.length < 3) {
-      const number = Math.floor(Math.random() * 99) + 1;
+    const c1 = rand(15, 28);
+    const c2 = c1 + rand(15, 25);
+    const c3 = c2 + rand(15, 22);
+    const c4 = rand(Math.max(c3 + 5, 90), 98);
 
-      if (!cuts.includes(number)) {
-        cuts.push(number);
-      }
-    }
-
-    cuts.sort((a, b) => a - b);
-
-    return [cuts[0], cuts[1] - cuts[0], cuts[2] - cuts[1], 100 - cuts[2]];
+    return [c1, c2 - c1, c3 - c2, c4 - c3];
   };
 
   // Temporary hardcoded codes (admin will later provide real ones via chat)
