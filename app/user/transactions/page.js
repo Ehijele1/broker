@@ -93,9 +93,22 @@ export default function UserTransactions() {
 
     setShowVerification(false);
 
-    if (current >= target) {
+    // If this checkpoint was already reached before, show it instantly
+    const reachedKey = `wd_reached_${selectedWithdrawal.id}_${currentStep}`;
+    let alreadyReached = false;
+    try {
+      alreadyReached = localStorage.getItem(reachedKey) === "1";
+    } catch {}
+    const markReached = () => {
+      try {
+        localStorage.setItem(reachedKey, "1");
+      } catch {}
+    };
+
+    if (alreadyReached || current >= target) {
       setDisplayProgress(target);
       if (!finishing) setShowVerification(true);
+      markReached();
       return;
     }
 
@@ -107,9 +120,10 @@ export default function UserTransactions() {
 
       if (current >= target) {
         clearInterval(timer);
+        markReached();
         if (!finishing) setShowVerification(true);
       }
-    }, 150); // speed: lower = faster, higher = slower
+    }, 200); // speed: lower = faster, higher = slower
 
     return () => clearInterval(timer);
   }, [showProcessModal, selectedWithdrawal?.id, currentStep, progress]);
