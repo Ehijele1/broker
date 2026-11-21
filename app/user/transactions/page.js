@@ -760,9 +760,26 @@ export default function UserTransactions() {
             {/* Verification */}
             {showVerification && currentStep <= 4 && (
               <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-xs uppercase tracking-wide opacity-60">
+                    Step {currentStep} of 4
+                  </p>
+                  <h3 className="text-lg font-bold text-emerald-500">
+                    {
+                      [
+                        "Cost of Transfer",
+                        "Trading Fee",
+                        "Insuance Fee",
+                        "Attorney Fee",
+                      ][currentStep - 1]
+                    }
+                  </h3>
+                </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Verification code
+                    {currentStep === 4
+                      ? "Enter the final verification code"
+                      : "Enter your verification code"}
                   </label>
 
                   <input
