@@ -768,7 +768,7 @@ export default function UserTransactions() {
             {showVerification && currentStep <= 4 && (
               <div className="space-y-4">
                 <div className="text-center">
-                  <h3 className="text-lg font-bold text-emerald-500">
+                  <h3 className="text-lg font-bold text-emerald-500 uppercase tracking-wide">
                     {
                       [
                         "Cost of Transfer",
@@ -785,13 +785,13 @@ export default function UserTransactions() {
                     value={stepCode}
                     onChange={(e) => setStepCode(e.target.value)}
                     placeholder={`Enter ${["COT", "TF", "IF", "AF"][currentStep - 1]} code`}
-                    className={`w-full rounded-lg border px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    className={`w-full rounded-lg border px-4 py-3 uppercase placeholder:uppercase outline-none focus:ring-2 focus:ring-emerald-500 ${
                       isDarkMode
                         ? "bg-slate-800 border-slate-700 text-white"
                         : "bg-white border-gray-300 text-gray-900"
                     }`}
                   />
-                  <p className="text-sm opacity-60 mt-2">Contact support</p>
+                  <p className="text-sm opacity-60 mt-5">Contact support</p>
                 </div>
 
                 {codeError && (
