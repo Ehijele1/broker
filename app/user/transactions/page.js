@@ -63,6 +63,57 @@ export default function UserTransactions() {
     fetchTransactions();
   }, []);
 
+  // Opens the modal at the saved progress (animation starts from there)
+  const openWithdrawalModal = (withdrawal) => {
+    setSelectedWithdrawal(withdrawal);
+    setStepCode("");
+    setCodeError("");
+    setProgress(withdrawal.progress ?? 0);
+    setDisplayProgress(withdrawal.progress ?? 0);
+    setCurrentStep(withdrawal.current_step ?? 1);
+    setShowVerification(false);
+    setShowProcessModal(true);
+  };
+
+  // Counts up to the current step's checkpoint, then shows the code box
+  useEffect(() => {
+    if (!showProcessModal || !selectedWithdrawal) return;
+
+    if (currentStep > 4) {
+      setShowVerification(false);
+      return;
+    }
+
+    const percentages = selectedWithdrawal.step_percentages || [];
+    const target = Math.min(
+      100,
+      percentages.slice(0, currentStep).reduce((sum, n) => sum + Number(n), 0),
+    );
+
+    let current = progress;
+
+    if (current >= target) {
+      setDisplayProgress(target);
+      setShowVerification(true);
+      return;
+    }
+
+    setShowVerification(false);
+    setDisplayProgress(current);
+
+    const timer = setInterval(() => {
+      current += 1;
+      setDisplayProgress(current);
+
+      if (current >= target) {
+        clearInterval(timer);
+        setShowVerification(true);
+      }
+    }, 80); // speed: lower = faster, higher = slower
+
+    return () => clearInterval(timer);
+  }, [showProcessModal, selectedWithdrawal?.id, currentStep, progress]);
+
   const fetchTransactions = async () => {
     try {
       // Fetch deposits
@@ -133,23 +184,7 @@ export default function UserTransactions() {
         );
 
         if (withdrawal) {
-          const step = withdrawal.current_step ?? 1;
-          const savedProgress = withdrawal.progress ?? 0;
-
-          setSelectedWithdrawal(withdrawal);
-          setProgress(savedProgress);
-          setDisplayProgress(
-            step === 1 && savedProgress === 0
-              ? (withdrawal.step_percentages?.[0] ?? 0)
-              : savedProgress,
-          );
-          setCurrentStep(step);
-          setShowVerification(
-            !(step === 1 && savedProgress === 0) && step <= 4,
-          );
-          setStepCode("");
-          setCodeError("");
-          setShowProcessModal(true);
+          openWithdrawalModal(withdrawal);
         }
 
         // Remove the query parameter after checking it
@@ -183,21 +218,7 @@ export default function UserTransactions() {
       return;
     }
 
-    const step = transaction.current_step ?? 1;
-    const savedProgress = transaction.progress ?? 0;
-
-    setSelectedWithdrawal(transaction);
-    setStepCode("");
-    setCodeError("");
-    setProgress(savedProgress);
-    setDisplayProgress(
-      step === 1 && savedProgress === 0
-        ? (transaction.step_percentages?.[0] ?? 0)
-        : savedProgress,
-    );
-    setCurrentStep(step);
-    setShowVerification(!(step === 1 && savedProgress === 0) && step <= 4);
-    setShowProcessModal(true);
+    openWithdrawalModal(transaction);
   };
 
   const handleVerifyCode = async () => {
@@ -715,14 +736,9 @@ export default function UserTransactions() {
 
               <div className="w-full h-3 rounded-full bg-gray-500/20 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-1000 ease-in-out"
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-100 ease-linear"
                   style={{
                     width: `${Math.min(100, Math.max(0, displayProgress))}%`,
-                  }}
-                  onTransitionEnd={() => {
-                    if (currentStep <= 4 && !showVerification) {
-                      setShowVerification(true);
-                    }
                   }}
                 />
               </div>
