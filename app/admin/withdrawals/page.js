@@ -536,7 +536,11 @@ export default function AdminWithdrawals() {
                       Verification progress
                     </span>
                     <span className="font-semibold text-purple-400">
-                      {selectedWithdrawal.progress || 0}%
+                      {Math.max(
+                        selectedWithdrawal.progress || 0,
+                        selectedWithdrawal.reached_progress || 0,
+                      )}
+                      %
                     </span>
                   </div>
 
@@ -544,7 +548,10 @@ export default function AdminWithdrawals() {
                     <div
                       className="h-full bg-purple-500 transition-all duration-500"
                       style={{
-                        width: `${selectedWithdrawal.progress || 0}%`,
+                        width: `${Math.max(
+                          selectedWithdrawal.progress || 0,
+                          selectedWithdrawal.reached_progress || 0,
+                        )}%`,
                       }}
                     />
                   </div>

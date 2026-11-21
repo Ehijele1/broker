@@ -103,6 +103,16 @@ export default function UserTransactions() {
       try {
         localStorage.setItem(reachedKey, "1");
       } catch {}
+
+      // Tell the database so the admin sees the same checkpoint
+      supabase
+        .rpc("report_withdrawal_checkpoint", {
+          p_withdrawal_id: selectedWithdrawal.id,
+          p_step_number: currentStep,
+        })
+        .then(({ error }) => {
+          if (error) console.error("Checkpoint report error:", error);
+        });
     };
 
     if (alreadyReached || current >= target) {
