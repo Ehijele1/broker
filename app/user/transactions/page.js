@@ -726,9 +726,6 @@ export default function UserTransactions() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold">Withdrawal Processing</h2>
-                <p className="text-sm opacity-60 mt-1">
-                  Track your withdrawal progress
-                </p>
               </div>
 
               <button
@@ -742,7 +739,7 @@ export default function UserTransactions() {
 
             {/* Withdrawal Amount */}
             <div className="text-center py-5">
-              <p className="text-sm opacity-60 mb-2">Withdrawal Amount</p>
+              <p className="text-sm opacity-60 mb-2">Amount</p>
 
               <h3 className="text-3xl font-bold">
                 {selectedWithdrawal.currency}{" "}
@@ -776,30 +773,25 @@ export default function UserTransactions() {
                       [
                         "Cost of Transfer",
                         "Trading Fee",
-                        "Insuance Fee",
+                        "Insurance Fee",
                         "Attorney Fee",
                       ][currentStep - 1]
                     }
                   </h3>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    {currentStep === 4
-                      ? "Enter the final verification code"
-                      : "Enter your verification code"}
-                  </label>
-
                   <input
                     type="text"
                     value={stepCode}
                     onChange={(e) => setStepCode(e.target.value)}
-                    placeholder="Enter your verification code"
+                    placeholder={`Enter ${["COT", "TF", "IF", "AF"][currentStep - 1]} code`}
                     className={`w-full rounded-lg border px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500 ${
                       isDarkMode
                         ? "bg-slate-800 border-slate-700 text-white"
                         : "bg-white border-gray-300 text-gray-900"
                     }`}
                   />
+                  <p className="text-sm opacity-60 mt-2">Contact support</p>
                 </div>
 
                 {codeError && (
