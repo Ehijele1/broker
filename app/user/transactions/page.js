@@ -761,9 +761,6 @@ export default function UserTransactions() {
             {showVerification && currentStep <= 4 && (
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-xs uppercase tracking-wide opacity-60">
-                    Step {currentStep} of 4
-                  </p>
                   <h3 className="text-lg font-bold text-emerald-500">
                     {
                       [
