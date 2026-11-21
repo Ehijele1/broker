@@ -656,6 +656,7 @@ export default function AdminWithdrawals() {
 
               {/* Balance Check Warning */}
               {selectedWithdrawal.status === "pending" &&
+                !selectedWithdrawal.balance_held &&
                 Number(selectedWithdrawal.profiles?.balance) <
                   Number(selectedWithdrawal.amount) && (
                   <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
@@ -735,8 +736,9 @@ export default function AdminWithdrawals() {
                       !selectedWithdrawal.process_completed ||
                       selectedWithdrawal.current_step !== 5 ||
                       selectedWithdrawal.progress !== 100 ||
-                      Number(selectedWithdrawal.profiles?.balance || 0) <
-                        Number(selectedWithdrawal.amount)
+                      (!selectedWithdrawal.balance_held &&
+                        Number(selectedWithdrawal.profiles?.balance || 0) <
+                          Number(selectedWithdrawal.amount))
                     }
                     className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors font-semibold disabled:opacity-50 flex items-center gap-2"
                   >
@@ -749,10 +751,13 @@ export default function AdminWithdrawals() {
                     selectedWithdrawal.current_step !== 5 ||
                     selectedWithdrawal.progress !== 100
                       ? "Awaiting Verification"
-                      : Number(selectedWithdrawal.profiles?.balance || 0) <
-                          Number(selectedWithdrawal.amount)
+                      : !selectedWithdrawal.balance_held &&
+                          Number(selectedWithdrawal.profiles?.balance || 0) <
+                            Number(selectedWithdrawal.amount)
                         ? "Insufficient Balance"
-                        : "Approve & Deduct Balance"}
+                        : selectedWithdrawal.balance_held
+                          ? "Approve Withdrawal"
+                          : "Approve & Deduct Balance"}
                   </button>
                 </>
               )}
