@@ -1,6 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, Search, User, Clock } from "lucide-react";
+import {
+  MessageSquare,
+  Send,
+  Search,
+  User,
+  Clock,
+  ImagePlus,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminChatPage() {
@@ -11,6 +18,9 @@ export default function AdminChatPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const messagesEndRef = useRef(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadUsers();
@@ -53,7 +63,7 @@ export default function AdminChatPage() {
           // Get last message
           const { data: lastMsg } = await supabase
             .from("chat_messages")
-            .select("message, created_at")
+            .select("message, image_url, created_at")
             .eq("user_id", chat.user_id)
             .order("created_at", { ascending: false })
             .limit(1)
@@ -74,7 +84,7 @@ export default function AdminChatPage() {
               chat.profiles?.username ||
               "Unknown User",
             email: chat.profiles?.email || "",
-            lastMessage: lastMsg?.message || "",
+            lastMessage: lastMsg?.message || (lastMsg?.image_url ? "📷 Photo" : ""),
             lastMessageTime: lastMsg?.created_at || new Date(),
             unreadCount: count || 0,
           });
@@ -165,16 +175,63 @@ export default function AdminChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      alert("Please select a JPG, PNG, WEBP or GIF image");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be less than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    e.target.value = "";
+  };
+
+  const clearImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || loading || !selectedUser) return;
+    if ((!newMessage.trim() && !imageFile) || loading || !selectedUser) return;
 
     setLoading(true);
     try {
+      let imageUrl = null;
+
+      if (imageFile) {
+        const ext = imageFile.name.split(".").pop();
+        const filePath = `${selectedUser.id}/admin_${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("chat-images")
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("chat-images")
+          .getPublicUrl(filePath);
+
+        imageUrl = urlData.publicUrl;
+      }
+
       const { error } = await supabase.from("chat_messages").insert([
         {
           user_id: selectedUser.id,
           message: newMessage.trim(),
+          image_url: imageUrl,
           sender_type: "admin",
           is_read: false,
         },
@@ -183,6 +240,7 @@ export default function AdminChatPage() {
       if (error) throw error;
 
       setNewMessage("");
+      clearImage();
       loadUsers(); // Refresh to update last message
     } catch (error) {
       console.error("Error sending message:", error);
@@ -237,9 +295,8 @@ export default function AdminChatPage() {
               <button
                 key={user.id}
                 onClick={() => setSelectedUser(user)}
-                className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left ${
-                  selectedUser?.id === user.id ? "bg-emerald-50" : ""
-                }`}
+                className={`w-full p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors text-left ${selectedUser?.id === user.id ? "bg-emerald-50" : ""
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -310,19 +367,34 @@ export default function AdminChatPage() {
                     className={`flex ${msg.sender_type === "admin" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[70%] rounded-2xl px-4 py-3 ${
-                        msg.sender_type === "admin"
-                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
-                          : "bg-white border border-gray-200 text-gray-900"
-                      }`}
-                    >
-                      <p className="text-sm">{msg.message}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          msg.sender_type === "admin"
-                            ? "text-emerald-100"
-                            : "text-gray-500"
+                      className={`max-w-[70%] rounded-2xl px-4 py-3 ${msg.sender_type === "admin"
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white"
+                        : "bg-white border border-gray-200 text-gray-900"
                         }`}
+                    >
+                      {msg.image_url && (
+                        <a
+                          href={msg.image_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src={msg.image_url}
+                            alt="Shared image"
+                            className="rounded-lg mb-1 max-h-72 w-full object-cover"
+                          />
+                        </a>
+                      )}
+                      {msg.message && (
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {msg.message}
+                        </p>
+                      )}
+                      <p
+                        className={`text-xs mt-1 ${msg.sender_type === "admin"
+                          ? "text-emerald-100"
+                          : "text-gray-500"
+                          }`}
                       >
                         {new Date(msg.created_at).toLocaleString()}
                       </p>
@@ -338,20 +410,55 @@ export default function AdminChatPage() {
               onSubmit={handleSendMessage}
               className="bg-white p-4 border-t border-gray-200"
             >
+              {imagePreview && (
+                <div className="mb-2 relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-24 rounded-lg border border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <div className="flex gap-3">
                 <input
-                  type="text"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  className="w-12 h-12 flex-shrink-0 border border-gray-300 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                >
+                  <ImagePlus size={20} />
+                </button>
+                <textarea
+                  rows={1}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
                   placeholder="Type your message..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-full 
-             bg-white text-black placeholder-gray-500
-             focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-2xl bg-white text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none max-h-28 overflow-y-auto"
                   disabled={loading}
                 />
                 <button
                   type="submit"
-                  disabled={loading || !newMessage.trim()}
+                  disabled={loading || (!newMessage.trim() && !imageFile)}
                   className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="text-white" size={20} />
