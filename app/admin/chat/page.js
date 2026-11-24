@@ -22,6 +22,15 @@ export default function AdminChatPage() {
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 112) + "px";
+  }, [newMessage]);
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -443,6 +452,7 @@ export default function AdminChatPage() {
                   <ImagePlus size={20} />
                 </button>
                 <textarea
+                  ref={textareaRef}
                   rows={1}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
