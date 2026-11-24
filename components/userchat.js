@@ -9,6 +9,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { playSound } from "@/lib/playSound";
 
 export default function UserChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,6 +110,9 @@ export default function UserChat() {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          if (payload.eventType === "INSERT" && payload.new.sender_type === "admin") {
+            playSound();
+          }
           if (payload.eventType === "INSERT") {
             setMessages((prev) => [...prev, payload.new]);
 

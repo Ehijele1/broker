@@ -9,6 +9,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { playSound } from "@/lib/playSound";
 
 export default function AdminChatPage() {
   const [users, setUsers] = useState([]);
@@ -156,6 +157,10 @@ export default function AdminChatPage() {
           table: "chat_messages",
         },
         (payload) => {
+          if (payload.new.sender_type === "user") {
+            playSound();
+          }
+
           // If message is for selected user, add to messages
           if (
             currentSelectedUser &&

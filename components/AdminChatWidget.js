@@ -10,6 +10,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { playSound } from "@/lib/playSound";
 
 export default function AdminChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -170,6 +171,11 @@ export default function AdminChatWidget() {
           table: "chat_messages",
         },
         (payload) => {
+          if (payload.new.sender_type === "user") playSound();
+          if (payload.new.sender_type === "user") {
+            playSound();
+          }
+
           if (
             currentSelectedUser &&
             payload.new.user_id === currentSelectedUser.id
