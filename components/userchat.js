@@ -23,6 +23,15 @@ export default function UserChat() {
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 112) + "px";
+  }, [newMessage]);
+
   useEffect(() => {
     getCurrentUser();
   }, []);
@@ -236,11 +245,11 @@ export default function UserChat() {
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-2xl border border-gray-200 transition-all ${isMinimized ? "w-80 h-14" : "w-96 h-[600px]"
+          className={`fixed bottom-6 right-6 z-50 flex flex-col bg-white rounded-2xl shadow-2xl border border-gray-200 transition-all ${isMinimized ? "w-80 h-14" : "w-96 h-[600px]"
             }`}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 rounded-t-2xl flex items-center justify-between">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 rounded-t-2xl flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                 <MessageSquare className="text-emerald-500" size={20} />
@@ -276,8 +285,7 @@ export default function UserChat() {
             <>
               {/* Messages */}
               <div
-                className={`${imagePreview ? "h-[calc(100%-13.5rem)]" : "h-[calc(100%-8rem)]"
-                  } overflow-y-auto p-4 space-y-4 bg-gray-50`}
+                className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-gray-50"
               >
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-500 mt-8">
@@ -341,7 +349,7 @@ export default function UserChat() {
               {/* Input */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-4 bg-white border-t border-gray-200 rounded-b-2xl"
+                className="p-4 bg-white border-t border-gray-200 rounded-b-2xl shrink-0"
               >
                 {imagePreview && (
                   <div className="mb-2 relative inline-block">
@@ -376,6 +384,7 @@ export default function UserChat() {
                     <ImagePlus size={18} />
                   </button>
                   <textarea
+                    ref={textareaRef}
                     rows={1}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
