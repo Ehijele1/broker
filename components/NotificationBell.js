@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { playSound } from "@/lib/playSound";
 import {
   Bell,
   X,
@@ -34,6 +35,7 @@ export default function NotificationBell({ userId }) {
           (payload) => {
             setNotifications((prev) => [payload.new, ...prev]);
             setUnreadCount((prev) => prev + 1);
+            playSound();
           },
         )
         .subscribe();
@@ -174,9 +176,8 @@ export default function NotificationBell({ userId }) {
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 hover:bg-slate-800/50 transition-colors cursor-pointer ${
-                        !notification.is_read ? "bg-slate-800/30" : ""
-                      }`}
+                      className={`p-4 hover:bg-slate-800/50 transition-colors cursor-pointer ${!notification.is_read ? "bg-slate-800/30" : ""
+                        }`}
                       onClick={() =>
                         !notification.is_read && markAsRead(notification.id)
                       }
