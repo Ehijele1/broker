@@ -6,6 +6,7 @@ import {
   createNotification,
   notificationTemplates,
 } from "@/lib/notificationUtils";
+import { sendStatusEmail } from "@/lib/sendEmail";
 import {
   DollarSign,
   Clock,
@@ -170,6 +171,7 @@ export default function AdminDeposits() {
         deposit.id, // related_id
       );
 
+      sendStatusEmail("deposit", deposit.id);
       alert("Deposit approved successfully!");
       setShowDetailsModal(false);
       setAdminNote("");
@@ -216,6 +218,7 @@ export default function AdminDeposits() {
         deposit.id, // related_id
       );
 
+      sendStatusEmail("deposit", deposit.id);
       alert("Deposit rejected");
       setShowDetailsModal(false);
       fetchDeposits();

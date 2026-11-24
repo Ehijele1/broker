@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { sendStatusEmail } from "@/lib/sendEmail";
 import {
   DollarSign,
   Clock,
@@ -157,6 +158,7 @@ export default function AdminWithdrawals() {
 
       if (error) throw error;
 
+      sendStatusEmail("withdrawal", withdrawal.id);
       alert("Withdrawal approved successfully!");
       setShowDetailsModal(false);
       setAdminNote("");
@@ -188,6 +190,7 @@ export default function AdminWithdrawals() {
 
       if (error) throw error;
 
+      sendStatusEmail("withdrawal", withdrawal.id);
       alert("Withdrawal rejected successfully!");
 
       setShowDetailsModal(false);
